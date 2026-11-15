@@ -1,5 +1,5 @@
 /* ============ LecSync Web · shared UI kit (no cycles: screens import this) ============ */
-import { $, el, I, L, toast, langName, LANGS } from './core.js?v=1.6.0';
+import { $, el, I, L, toast, langName, LANGS } from './core.js?v=1.6.1';
 
 export const nav = (p, { replace = false } = {}) => { replace ? location.replace('#' + p) : (location.hash = p); };
 export const path = () => (location.hash.replace(/^#/, '') || '/').split('?')[0];
