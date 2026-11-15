@@ -160,6 +160,7 @@ export async function settings() {
   ));
 
   body.append(el('div', { class: 'list', style: 'margin-top:12px' },
+    item({ icon: I.refresh, title: '强制更新（清缓存重载）', sub: '发新版后还看到旧界面就点这个', onClick: hardReload }),
     item({ icon: I.download, title: L.t('dataExport'), onClick: exportAll }),
     item({ icon: I.upload, title: L.t('dataImport'), onClick: importAll }),
     item({ icon: I.trash, title: L.t('clearData'), danger: true, onClick: clearAll }),
@@ -167,6 +168,20 @@ export async function settings() {
 
   body.append(el('div', { class: 'tiny dim center', style: 'margin-top:18px' }, 'LecSync Web 1.0 · ' + L.t('proTitle')));
   return { node: root, title: L.t('settings') };
+}
+
+async function hardReload() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+  } catch (e) { console.warn(e); }
+  location.replace(location.pathname + '?v=' + Date.now());
 }
 
 function exportAll() {
