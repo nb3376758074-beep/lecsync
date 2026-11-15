@@ -2,6 +2,7 @@
 import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js';
 import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js';
 import { llmReady } from './ai.js';
+import { translateText } from './speech.js';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -246,21 +247,48 @@ function diagCard() {
       lines.push('接口: ' + (s.asrEndpoint || '(空)'));
       lines.push('Key: ' + (s.asrKey ? s.asrKey.slice(0, 6) + '…' + s.asrKey.slice(-4) : '(空)'));
       out.textContent = lines.join('\n') + '\n\n翻译测试中…';
+      const TL = (s.targetLang || 'zh-CN').split('-')[0];
+      const SRC = 'Сегодня мы изучали линейную алгебру.';
+
+      // ① Google
       try {
         const t0 = Date.now();
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent((s.targetLang || 'zh-CN').split('-')[0])}&dt=t&q=${encodeURIComponent('Сегодня мы изучали линейную алгебру')}`;
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(TL)}&dt=t&q=${encodeURIComponent(SRC)}`;
         const r = await fetch(url);
+        const j = await r.json();
+        const tr = (j?.[0] || []).map(x => x?.[0] || '').join('').trim();
+        lines.push(`\n① Google: OK ${Date.now() - t0}ms -> ${tr || '(空)'}`);
+      } catch (e) { lines.push('\n① Google: 失败 ' + String(e.message || e)); }
+
+      // ② 大模型兜底（和转写同一个 key）
+      try {
+        const t0 = Date.now();
+        const base = (s.asrEndpoint || '').replace(/\/+$/, '');
+        const r = await fetch(base + '/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.asrKey },
+          body: JSON.stringify({
+            model: s.translateModel || 'deepseek-ai/DeepSeek-V4-Flash',
+            messages: [
+              { role: 'system', content: `Translate into 简体中文. Output only the translation.` },
+              { role: 'user', content: SRC },
+            ],
+            temperature: 0.2, max_tokens: 300, stream: false,
+          }),
+        });
         const txt = await r.text();
-        lines.push(`\n翻译 HTTP ${r.status} (${Date.now() - t0}ms)`);
-        lines.push('返回前 120 字: ' + txt.slice(0, 120));
-        try {
-          const j = JSON.parse(txt);
-          const tr = (j?.[0] || []).map(x => x?.[0] || '').join('').trim();
-          lines.push('解析结果: ' + (tr || '(空)'));
-        } catch (e) { lines.push('JSON 解析失败'); }
-      } catch (e) {
-        lines.push('\n翻译请求失败: ' + String(e.message || e));
-      }
+        let tr = '';
+        try { tr = (JSON.parse(txt)?.choices?.[0]?.message?.content || '').trim(); } catch {}
+        lines.push(`\n② 大模型: HTTP ${r.status} ${Date.now() - t0}ms -> ${tr || txt.slice(0, 100)}`);
+      } catch (e) { lines.push('\n② 大模型: 失败 ' + String(e.message || e)); }
+
+      // ③ 走真实函数（含缓存/兜底链）
+      try {
+        const t0 = Date.now();
+        const tr = await translateText(SRC, s.targetLang || 'zh-CN', 'auto');
+        lines.push(`\n③ translateText(): ${Date.now() - t0}ms -> ${tr || '(空)'}`);
+      } catch (e) { lines.push('\n③ translateText 失败: ' + String(e.message || e)); }
+
       out.textContent = lines.join('\n');
     },
   });
