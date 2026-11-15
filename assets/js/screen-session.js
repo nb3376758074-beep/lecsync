@@ -1,8 +1,8 @@
 /* ============ screen: Session detail (transcript / digest / files / chat) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtDate, fmtDur, langName, audioStore, bytes } from './core.js';
-import { header, nav, sheet, confirmBox, promptBox, copyText, shareText, pickLanguage, emptyState } from './ui.js';
-import { localDigest, askAI, llmReady, toTxt, toSrt, toVtt, toMarkdown, download, safeName } from './ai.js';
-import { translateText, transcribeBlob, splitSentences } from './speech.js';
+import { $, el, I, L, store, toast, fmtClock, fmtDate, fmtDur, langName, audioStore, bytes } from './core.js?v=1.6.0';
+import { header, nav, sheet, confirmBox, promptBox, copyText, shareText, pickLanguage, emptyState } from './ui.js?v=1.6.0';
+import { localDigest, askAI, llmReady, toTxt, toSrt, toVtt, toMarkdown, download, safeName } from './ai.js?v=1.6.0';
+import { translateText, transcribeBlob, splitSentences } from './speech.js?v=1.6.0';
 
 let ui = { tab: 'transcript', q: '', showTr: true, sel: null };
 
@@ -122,7 +122,7 @@ function transcriptTab(s) {
     }),
     el('button', {
       class: 'btn sm ghost', text: L.t('fullscreenSub'),
-      onClick: () => import('./ui.js').then(m => m.sheet({ title: L.t('fullscreenSub'), body: el('div', { class: 'small muted', text: '录音页右上角的全屏按钮可以在录音时放大字幕；这里可以用浏览器全屏查看转录。' }), actions: [{ label: L.t('ok'), kind: 'primary', onClick: () => document.documentElement.requestFullscreen?.() }] })),
+      onClick: () => import('./ui.js?v=1.6.0').then(m => m.sheet({ title: L.t('fullscreenSub'), body: el('div', { class: 'small muted', text: '录音页右上角的全屏按钮可以在录音时放大字幕；这里可以用浏览器全屏查看转录。' }), actions: [{ label: L.t('ok'), kind: 'primary', onClick: () => document.documentElement.requestFullscreen?.() }] })),
     }));
   wrap.append(search, row);
 
