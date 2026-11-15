@@ -144,26 +144,78 @@ export function splitSentences(text) {
 
 /* simple sentence-level translation queue with cache */
 const trCache = new Map();
+/* 用 LLM 兜底翻译（硅基流动等 OpenAI 兼容接口，CORS 友好，俄区也能直连） */
+let googleDead = 0; // 0=未知 1=可用 2=挂了
+const LANG_ZH = { zh: '简体中文', en: '英文', ru: '俄语', ja: '日语', ko: '韩语', de: '德语', fr: '法语', es: '西班牙语', it: '意大利语', pt: '葡萄牙语', ar: '阿拉伯语', tr: '土耳其语', uk: '乌克兰语', hi: '印地语', th: '泰语', vi: '越南语', id: '印尼语', pl: '波兰语', nl: '荷兰语' };
+
+async function llmTranslate(text, to) {
+  const s = store.settings;
+  if (!s.asrEndpoint || !s.asrKey) return '';
+  const base = s.asrEndpoint.replace(/\/+$/, '');
+  const url = /\/chat\/completions$/.test(base) ? base : base + '/chat/completions';
+  const targetName = LANG_ZH[(to || 'zh').split('-')[0]] || to;
+  const body = {
+    model: s.translateModel || 'deepseek-ai/DeepSeek-V4-Flash',
+    messages: [
+      { role: 'system', content: `You are a translator. Translate the user's text into ${targetName}. Output ONLY the translation, no explanations, no quotes.` },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.2,
+    max_tokens: 600,
+    stream: false,
+  };
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.asrKey },
+      body: JSON.stringify(body),
+      signal: ctl.signal,
+    });
+    if (!r.ok) { console.warn('llm translate http', r.status, (await r.text()).slice(0, 120)); return ''; }
+    const j = await r.json();
+    return (j?.choices?.[0]?.message?.content || '').trim().replace(/^["“]|["”]$/g, '');
+  } catch (e) { console.warn('llm translate failed', e); return ''; }
+  finally { clearTimeout(timer); }
+}
+
 export async function translateText(text, to, from = 'auto') {
   const key = from + '|' + to + '|' + text;
   if (trCache.has(key)) return trCache.get(key);
   const cached = readCache(key); if (cached) { trCache.set(key, cached); return cached; }
   const sl = (from || 'auto').split('-')[0], tl = (to || 'en').split('-')[0];
   let out = '';
-  try {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
-    const r = await fetch(url, { mode: 'cors' });
-    if (r.ok) {
-      const j = await r.json();
-      out = (j?.[0] || []).map(x => x?.[0] || '').join('').trim();
-    }
-  } catch {}
-  if (!out) {
+
+  // 1) Google（快，但在俄区不稳）
+  if (googleDead !== 2) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 6000);
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+      const r = await fetch(url, { mode: 'cors', signal: ctl.signal });
+      clearTimeout(t);
+      if (r.ok) {
+        const j = await r.json();
+        out = (j?.[0] || []).map(x => x?.[0] || '').join('').trim();
+        if (out) googleDead = 1;
+      } else { googleDead = 2; }
+    } catch { googleDead = 2; }
+  }
+
+  // 2) MyMemory
+  if (!out && googleDead === 2) {
     try {
       const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 480))}&langpair=${sl === 'auto' ? 'zh' : sl}|${tl}`);
       if (r2.ok) { const j2 = await r2.json(); out = j2?.responseData?.translatedText || ''; }
     } catch {}
   }
+
+  // 3) LLM 兜底（和转写同一个 key）
+  if (!out) {
+    try { out = await llmTranslate(text, to); } catch {}
+  }
+
   if (out) { trCache.set(key, out); writeCache(key, out); }
   return out;
 }
