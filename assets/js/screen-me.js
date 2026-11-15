@@ -1,9 +1,9 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
 import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText } from './ui.js';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js';
 import { llmReady } from './ai.js';
 
-function rerender() { location.hash = location.hash; }
+function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const item = ({ icon, title, sub, onClick, right, danger }) => el('button', { class: 'item', onClick },
   icon ? el('div', { class: 'ico', html: icon, style: danger ? 'color:var(--live)' : '' }) : null,
