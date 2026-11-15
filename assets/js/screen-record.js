@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=1.9.0';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=1.9.0';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=1.9.0';
-import { localDigest, suggestTitle } from './ai.js?v=1.9.0';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.0.0';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.0.0';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=2.0.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.0.0';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
@@ -142,6 +142,7 @@ function quickActions() {
   const grid = el('div', { style: 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px' },
     item(I.upload, L.t('uploadAudio'), () => nav('/upload'), '音视频 → 文字'),
     item(I.translate, L.t('translate'), () => nav('/translate'), langName(store.settings.targetLang, L.lang)),
+    item(I.doc, '拍照翻译', () => nav('/photo'), '菜单/路牌 → 中文'),
     item(I.dictation, L.t('dictation'), () => nav('/dictation'), '逐句跟打判分'),
     item(I.chat, L.t('newChat'), () => nav('/chats'), '围绕录音提问'));
   return el('div', {},
