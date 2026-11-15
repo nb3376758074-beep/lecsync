@@ -127,7 +127,7 @@ function transcriptTab(s) {
   wrap.append(search, row);
 
   if (!s.lines?.length) {
-    const canTranscribe = !!(store.settings.asrEndpoint && (s.audioId || s.audioUrl));
+    const canTranscribe = !!(store.settings.asrEndpoint && store.settings.asrKey && (s.audioId || s.audioUrl));
     wrap.append(emptyState(I.txt, L.t('transcriptEmpty'), '录音没有产生文字，或者麦克风权限被拒了。', el('div', { class: 'stack sm', style: 'align-items:center' },
       canTranscribe ? el('button', {
         class: 'btn primary', text: '转写这段录音', onClick: () => transcribeSession(s),
@@ -195,7 +195,7 @@ async function translateAll(s) {
 
 async function transcribeSession(s) {
   const cfg = store.settings;
-  if (!cfg.asrEndpoint) { toast('先在设置里填转写接口'); nav('/settings/asr'); return; }
+  if (!cfg.asrEndpoint || !cfg.asrKey) { toast('先在设置里填转写接口和 Key'); nav('/settings/asr'); return; }
   toast('正在转写…', 4000);
   try {
     const blob = s.audioId ? await audioStore.get(s.audioId) : null;
