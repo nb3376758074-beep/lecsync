@@ -309,7 +309,7 @@ function pushLine(text) {
   }
   const s = store.settings;
   if (s.autoTranslate && s.targetLang && s.targetLang.split('-')[0] !== s.recognitionLang.split('-')[0]) {
-    translateText(ln.text, s.targetLang, s.recognitionLang).then(tr => {
+    translateText(ln.text, s.targetLang, 'auto').then(tr => {
       if (!tr) return;
       ln.tr = tr;
       const tx = st.refs.lines?.querySelector(`.line[data-i="${idx}"] .tx`);
