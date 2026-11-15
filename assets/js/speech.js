@@ -110,7 +110,10 @@ export async function transcribeBlob(blob, { endpoint, key, model, language }) {
   const ext = (blob.type || '').includes('mp4') ? 'm4a' : 'webm';
   fd.append('file', blob, 'chunk.' + ext);
   fd.append('model', model || 'whisper-1');
-  if (language && language !== 'auto') fd.append('language', language.split('-')[0]);
+  // 不强行指定语言：SenseVoice / Whisper 都会自动检测，指定错语言反而识别成错的
+  if (language && language !== 'auto' && language !== 'zh-CN' && language !== 'zh-TW') {
+    fd.append('language', language.split('-')[0]);
+  }
   const headers = {};
   if (key) headers.Authorization = 'Bearer ' + key;
   const res = await fetch(url, { method: 'POST', headers, body: fd });
