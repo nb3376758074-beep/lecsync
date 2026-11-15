@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=1.6.3';
+import { store, audioStore, uid, toast } from './core.js?v=1.7.0';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -144,7 +144,68 @@ export function splitSentences(text) {
 
 /* simple sentence-level translation queue with cache */
 const trCache = new Map();
-/* 用 LLM 兜底翻译（硅基流动等 OpenAI 兼容接口，CORS 友好，俄区也能直连） */
+/* ---------- 本地 Whisper（transformers.js，纯浏览器推理，不花钱、不用 key） ---------- */
+const CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+let tf = null, asrPipe = null, asrModel = null;
+
+async function loadTransformers(onProgress) {
+  if (tf) return tf;
+  onProgress && onProgress('正在加载本地识别引擎（首次约 5MB）…');
+  tf = await import(/* @vite-ignore */ CDN);
+  tf.env.allowLocalModels = false;
+  tf.env.allowRemoteModels = true;
+  if (tf.env.backends?.onnx?.wasm) {
+    tf.env.backends.onnx.wasm.wasmPaths = CDN + '/dist/';
+  }
+  return tf;
+}
+
+async function getAsr(model = 'Xenova/whisper-tiny', onProgress) {
+  const t = await loadTransformers(onProgress);
+  if (asrPipe && asrModel === model) return asrPipe;
+  onProgress && onProgress('首次使用要下载模型（约 40MB），之后会缓存…');
+  asrPipe = await t.pipeline('automatic-speech-recognition', model, {
+    quantized: true,
+    progress_callback: p => {
+      if (p && p.status === 'progress' && p.total) {
+        onProgress && onProgress(`下载模型 ${Math.round((p.loaded / p.total) * 100)}%`);
+      }
+    },
+  });
+  asrModel = model;
+  return asrPipe;
+}
+
+async function blobTo16k(blob) {
+  const buf = await blob.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  let audio;
+  try { audio = await ctx.decodeAudioData(buf.slice(0)); }
+  finally { try { ctx.close(); } catch {} }
+  const targetRate = 16000;
+  const frameCount = Math.ceil(audio.duration * targetRate);
+  const off = new OfflineAudioContext(1, frameCount, targetRate);
+  const src = off.createBufferSource();
+  src.buffer = audio;
+  src.connect(off.destination);
+  src.start(0);
+  const rendered = await off.startRendering();
+  return rendered.getChannelData(0);
+}
+
+/** 本地转写：返回识别文本。onProgress(阶段文字) */
+export async function transcribeLocal(blob, { model = 'Xenova/whisper-tiny', language = null, onProgress } = {}) {
+  const pipe = await getAsr(model, onProgress);
+  onProgress && onProgress('解码音频…');
+  const audio = await blobTo16k(blob);
+  onProgress && onProgress('本地识别中（比云端慢，请稍等）…');
+  const opts = { chunk_length_s: 30, stride_length_s: 5, task: 'transcribe' };
+  if (language && language !== 'auto') opts.language = language.split('-')[0];
+  const out = await pipe(audio, opts);
+  return (out?.text || '').trim();
+}
+
 let googleDead = 0; // 0=未知 1=可用 2=挂了
 const LANG_ZH = { zh: '简体中文', en: '英文', ru: '俄语', ja: '日语', ko: '韩语', de: '德语', fr: '法语', es: '西班牙语', it: '意大利语', pt: '葡萄牙语', ar: '阿拉伯语', tr: '土耳其语', uk: '乌克兰语', hi: '印地语', th: '泰语', vi: '越南语', id: '印尼语', pl: '波兰语', nl: '荷兰语' };
 
