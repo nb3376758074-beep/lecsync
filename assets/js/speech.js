@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=1.7.0';
+import { store, audioStore, uid, toast } from './core.js?v=1.7.1';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -163,8 +163,7 @@ async function loadTransformers(onProgress) {
 async function getAsr(model = 'Xenova/whisper-tiny', onProgress) {
   const t = await loadTransformers(onProgress);
   if (asrPipe && asrModel === model) return asrPipe;
-  onProgress && onProgress('首次使用要下载模型（约 40MB），之后会缓存…');
-  asrPipe = await t.pipeline('automatic-speech-recognition', model, {
+  const build = async () => t.pipeline('automatic-speech-recognition', model, {
     quantized: true,
     progress_callback: p => {
       if (p && p.status === 'progress' && p.total) {
@@ -172,6 +171,15 @@ async function getAsr(model = 'Xenova/whisper-tiny', onProgress) {
       }
     },
   });
+  onProgress && onProgress('首次使用要下载模型（约 40MB），之后会缓存…');
+  try {
+    asrPipe = await build();
+  } catch (e) {
+    // 直连 huggingface 失败时换镜像再试一次
+    onProgress && onProgress('直连失败，改用镜像下载…');
+    t.env.remoteHost = 'https://hf-mirror.com';
+    asrPipe = await build();
+  }
   asrModel = model;
   return asrPipe;
 }
