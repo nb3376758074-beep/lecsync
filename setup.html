@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>LecSync · 配置转写</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div id="app">
+  <main class="view no-tab" style="padding:24px 20px">
+    <div class="stack lg" style="max-width:520px;margin:0 auto">
+      <div class="row" style="gap:10px;align-items:center">
+        <span style="width:34px;height:34px;border-radius:10px;background:#000;display:grid;place-items:center;color:#fff">
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none"><path d="M5 33c6-2 8-11 12-11s6 9 10 9 6-13 10-13 6 4 8 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </span>
+        <div><div style="font-weight:700">LecSync</div><div class="tiny dim">一次配置，之后录音自动出文字</div></div>
+      </div>
+      <div class="card" id="box">
+        <div class="stack sm">
+          <div class="small" style="font-weight:640" id="title">正在写入配置…</div>
+          <div class="tiny dim" id="msg"></div>
+        </div>
+      </div>
+      <div class="stack sm">
+        <a class="btn primary block" href="./index.html" style="text-decoration:none" id="go">打开 LecSync</a>
+        <div class="tiny dim center">配置只存在这台设备的浏览器里，不会上传</div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+(function () {
+  var KEY = 'lecsync.web.v1';
+  var hash = location.hash.replace(/^#/, '');
+  var q = new URLSearchParams(hash);
+  var key = (q.get('key') || '').trim();
+  var model = (q.get('model') || 'FunAudioLLM/SenseVoiceSmall').trim();
+  var endpoint = (q.get('endpoint') || 'https://api.siliconflow.cn/v1').trim();
+  var title = document.getElementById('title');
+  var msg = document.getElementById('msg');
+
+  function done(ok, text) {
+    title.textContent = ok ? '✅ 配置完成' : '⚠️ 没找到 key';
+    msg.textContent = text;
+  }
+
+  if (!key) {
+    done(false, '链接里缺少 #key=... 参数。请让配置链接完整复制（包括 # 后面的部分）。');
+    return;
+  }
+
+  try {
+    var raw = localStorage.getItem(KEY);
+    var db = raw ? JSON.parse(raw) : {};
+    if (!db || typeof db !== 'object') db = {};
+    if (!db.settings || typeof db.settings !== 'object') db.settings = {};
+    db.settings.asrEndpoint = endpoint;
+    db.settings.asrModel = model;
+    db.settings.asrKey = key;
+    db.settings.engine = 'auto';
+    localStorage.setItem(KEY, JSON.stringify(db));
+    // 清掉地址栏里的 key，别留在历史记录里
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    done(true, '转写接口：' + endpoint + '\n模型：' + model + '\nKey 已保存（' + key.slice(0, 6) + '…' + key.slice(-4) + '）');
+  } catch (e) {
+    done(false, '写入失败：' + e.message);
+  }
+})();
+</script>
+</body>
+</html>
