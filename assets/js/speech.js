@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=1.6.0';
+import { store, audioStore, uid, toast } from './core.js?v=1.6.1';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
