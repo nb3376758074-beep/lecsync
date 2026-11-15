@@ -369,6 +369,15 @@ function load() {
   try {
     const raw = localStorage.getItem(KEY);
     db = raw ? merge(DEFAULTS, JSON.parse(raw)) : structuredClone(DEFAULTS);
+    // 独立的 ASR 配置（setup.html 写入），避免被主 store 覆盖
+    try {
+      const k = localStorage.getItem('lcs.asrKey');
+      if (k) db.settings.asrKey = k;
+      const ep = localStorage.getItem('lcs.asrEndpoint');
+      if (ep) db.settings.asrEndpoint = ep;
+      const md = localStorage.getItem('lcs.asrModel');
+      if (md) db.settings.asrModel = md;
+    } catch {}
   } catch { db = structuredClone(DEFAULTS); }
   return db;
 }
