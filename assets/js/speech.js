@@ -203,10 +203,13 @@ export async function translateText(text, to, from = 'auto') {
     } catch { googleDead = 2; }
   }
 
-  // 2) MyMemory
+  // 2) MyMemory（5 秒超时，别把后面的兜底堵死）
   if (!out && googleDead === 2) {
     try {
-      const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 480))}&langpair=${sl === 'auto' ? 'zh' : sl}|${tl}`);
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 5000);
+      const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 480))}&langpair=${sl === 'auto' ? 'zh' : sl}|${tl}`, { signal: ctl.signal });
+      clearTimeout(t);
       if (r2.ok) { const j2 = await r2.json(); out = j2?.responseData?.translatedText || ''; }
     } catch {}
   }
