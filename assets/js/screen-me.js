@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.9.0';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.9.0';
-import { llmReady } from './ai.js?v=1.9.0';
-import { translateText } from './speech.js?v=1.9.0';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=2.0.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=2.0.0';
+import { llmReady } from './ai.js?v=2.0.0';
+import { translateText } from './speech.js?v=2.0.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -268,7 +268,7 @@ function localCard() {
     onClick: async () => {
       out.textContent = '准备中…';
       try {
-        const { transcribeLocal } = await import('./speech.js?v=1.9.0');
+        const { transcribeLocal } = await import('./speech.js?v=2.0.0');
         const blob = makeTone();
         const t0 = Date.now();
         const txt = await transcribeLocal(blob, {
@@ -376,7 +376,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=1.9.0');
+          const { llmChat } = await import('./ai.js?v=2.0.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
