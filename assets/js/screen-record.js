@@ -348,7 +348,7 @@ async function stopRec() {
 
   // 录音后自动转写：没实时识别（iOS）但有转写接口时，把整段音频送去转写
   const cfg = store.settings;
-  if (blob && !lines.length && cfg.asrEndpoint) {
+  if (blob && !lines.length && cfg.asrEndpoint && cfg.asrKey) {
     toast('正在转写录音…', 4000);
     try {
       const txt = await transcribeBlob(blob, {
