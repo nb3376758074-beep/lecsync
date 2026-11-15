@@ -1,5 +1,5 @@
 /* ============ onboarding overlay ============ */
-import { el, I, L, store, logoMark } from './core.js?v=1.8.0';
+import { el, I, L, store, logoMark } from './core.js?v=1.9.0';
 
 const ART = [
   `<svg viewBox="0 0 240 180" width="100%" style="max-width:300px">
@@ -30,7 +30,7 @@ export function show() {
   const idx = { i: 0 };
   const host = el('div', { class: 'ob' });
   const brand = el('div', { class: 'row', style: 'gap:8px;align-items:center;color:var(--text);opacity:.9' },
-    el('span', { html: logoMark(26), style: 'display:grid' }),
+    el('img', { src: 'logo.png', width: 28, height: 28, alt: '皓月翻译', style: 'border-radius:7px' }),
     el('span', { style: 'font-weight:700;letter-spacing:-.01em', text: '皓月翻译' }));
   const art = el('div', { class: 'art', html: ART[0], style: 'max-height:44dvh;overflow:hidden' });
   const title = el('h2', { text: L.t('firstRunTitle') });
