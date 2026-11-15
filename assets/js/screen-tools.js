@@ -1,8 +1,8 @@
 /* ============ screens: Upload, Translate, Dictation ============ */
-import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=1.9.0';
-import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=1.9.0';
-import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=1.9.0';
-import { localDigest, suggestTitle } from './ai.js?v=1.9.0';
+import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.0.0';
+import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.0.0';
+import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.0.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.0.0';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rerender = () => refresh();
@@ -247,6 +247,147 @@ export async function translate() {
     const iv = setInterval(paintFs, 800);
   }
   return { node: root, title: L.t('translate') };
+}
+
+/* ================= Photo translate (拍照翻译) ================= */
+const TESS_CDN = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+let tesseractLoading = null;
+
+function loadTesseract() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (tesseractLoading) return tesseractLoading;
+  tesseractLoading = new Promise((res, rej) => {
+    const s = el('script', { src: TESS_CDN });
+    s.onload = () => (window.Tesseract ? res(window.Tesseract) : rej(new Error('Tesseract 加载失败')));
+    s.onerror = () => rej(new Error('Tesseract 脚本下载失败（网络）'));
+    document.head.append(s);
+  });
+  return tesseractLoading;
+}
+
+function ocrLangs() {
+  const code = (store.settings.recognitionLang || 'zh-CN').split('-')[0];
+  const map = { zh: 'chi_sim', ru: 'rus', en: 'eng', ja: 'jpn', ko: 'kor', de: 'deu', fr: 'fra', es: 'spa', it: 'ita', pt: 'por', ar: 'ara', tr: 'tur', uk: 'ukr', hi: 'hin', vi: 'vie', th: 'tha', id: 'ind' };
+  const main = map[code] || 'eng';
+  return main === 'eng' ? 'eng+rus' : main + '+eng';
+}
+
+export async function photo() {
+  const root = el('div', {});
+  let stream = null;
+  const stopCam = () => { try { stream?.getTracks().forEach(t => t.stop()); } catch {} stream = null; };
+  root.append(header({ title: '拍照翻译', back: () => { stopCam(); nav('/'); } }));
+
+  const body = el('div', { style: 'padding:0 18px 20px' });
+  root.append(body);
+
+  const status = el('div', { class: 'tiny dim', style: 'margin-top:8px;min-height:18px' });
+  const video = el('video', {
+    playsinline: '', autoplay: '', muted: '',
+    style: 'width:100%;border-radius:16px;background:#000;aspect-ratio:3/4;object-fit:cover;display:none',
+  });
+  const shot = el('img', { style: 'width:100%;border-radius:16px;display:none' });
+  const stage = el('div', { style: 'margin-top:10px;position:relative;background:var(--surface);border-radius:16px;overflow:hidden;min-height:180px;display:grid;place-items:center' },
+    el('div', { class: 'tiny dim', style: 'padding:40px 16px;text-align:center', text: '打开相机，对准要翻译的文字' }), video, shot);
+
+  const file = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: 'display:none' });
+  const ta = el('textarea', { class: 'input', rows: 3, placeholder: '识别到的文字（可修改后重新翻译）', style: 'margin-top:12px' });
+  const out = el('div', { class: 'card flat', style: 'margin-top:10px;display:none' });
+
+  const btnCam = el('button', { class: 'btn primary block', text: '打开相机', onClick: startCam });
+  const btnShot = el('button', { class: 'btn primary block', text: '拍照识别', style: 'display:none', onClick: capture });
+  const btnPick = el('button', { class: 'btn ghost block', text: '从相册选一张', style: 'margin-top:8px', onClick: () => file.click() });
+  const btnTr = el('button', { class: 'btn ghost block', text: '重新翻译这段文字', style: 'margin-top:8px', onClick: () => runTranslate(ta.value) });
+
+  body.append(stage, btnCam, btnShot, btnPick, file, ta, btnTr, out, status);
+
+  async function startCam() {
+    status.textContent = '正在请求相机…';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      video.srcObject = stream; video.style.display = 'block';
+      await video.play().catch(() => {});
+      btnCam.style.display = 'none'; btnShot.style.display = 'block'; shot.style.display = 'none';
+      status.textContent = '对准文字，点“拍照识别”';
+      const ph = stage.querySelector('.tiny');
+      if (ph) ph.remove();
+    } catch (e) {
+      status.textContent = '相机打不开：' + String(e.message || e).slice(0, 80) + '（可用下面的“从相册选一张”）';
+      btnPick.style.marginTop = '8px';
+    }
+  }
+
+  async function capture() {
+    if (!video.videoWidth) { status.textContent = '相机还没准备好'; return; }
+    const c = el('canvas');
+    c.width = video.videoWidth; c.height = video.videoHeight;
+    c.getContext('2d').drawImage(video, 0, 0);
+    shot.src = c.toDataURL('image/jpeg', 0.92);
+    shot.style.display = 'block'; video.style.display = 'none';
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    await doOcr(blob);
+    // 回到取景
+    video.style.display = 'block'; shot.style.display = 'none';
+  }
+
+  file.onchange = async () => {
+    const f = file.files[0];
+    if (!f) return;
+    shot.src = URL.createObjectURL(f); shot.style.display = 'block'; video.style.display = 'none';
+    await doOcr(f);
+  };
+
+  async function doOcr(blob) {
+    out.style.display = 'none';
+    status.textContent = '正在识别文字（首次要下载识别引擎，约 15–20MB）…';
+    try {
+      const T = await loadTesseract();
+      const worker = await T.createWorker(ocrLangs(), 1, { logger: m => {
+        if (m.status === 'recognizing text') status.textContent = '识别中 ' + Math.round((m.progress || 0) * 100) + '%';
+        else if (m.status && m.progress !== undefined) status.textContent = m.status + ' ' + Math.round((m.progress || 0) * 100) + '%';
+      } });
+      const { data } = await worker.recognize(blob);
+      await worker.terminate();
+      const text = (data?.text || '').trim();
+      if (!text) { status.textContent = '没识别到文字：换个角度、靠近一点、光线亮一点再试'; return; }
+      ta.value = text;
+      status.textContent = `识别到 ${text.replace(/\s/g, '').length} 个字`;
+      await runTranslate(text);
+    } catch (e) {
+      status.textContent = '识别失败：' + String(e.message || e).slice(0, 100);
+    }
+  }
+
+  async function runTranslate(text) {
+    const t = (text || '').trim();
+    if (!t) return;
+    out.style.display = 'block';
+    out.textContent = '翻译中…';
+    const to = store.settings.targetLang || 'zh-CN';
+    try {
+      const tr = await translateText(t, to, 'auto');
+      out.innerHTML = '';
+      out.append(
+        el('div', { class: 'tiny dim', text: '译文 → ' + langName(to, L.lang) }),
+        el('div', { style: 'font-size:17px;line-height:1.55;margin-top:6px;white-space:pre-wrap', text: tr || '（翻译失败，检查网络）' }),
+        el('div', { class: 'row', style: 'gap:8px;margin-top:12px' },
+          el('button', { class: 'btn sm ghost', text: '复制译文', onClick: () => copyText(tr) }),
+          el('button', { class: 'btn sm ghost', text: '朗读', onClick: () => speak(tr, to) }),
+          el('button', { class: 'btn sm ghost', text: '存为会话', onClick: () => importTextAsSession(t + '\n' + tr) })));
+    } catch (e) {
+      out.textContent = '翻译失败：' + String(e.message || e).slice(0, 80);
+    }
+  }
+
+  function speak(text, lang) {
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang || 'zh-CN';
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  return { node: root, title: '拍照翻译' };
 }
 
 /* ================= Dictation ================= */
