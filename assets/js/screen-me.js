@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.8.0';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.8.0';
-import { llmReady } from './ai.js?v=1.8.0';
-import { translateText } from './speech.js?v=1.8.0';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.9.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.9.0';
+import { llmReady } from './ai.js?v=1.9.0';
+import { translateText } from './speech.js?v=1.9.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -268,7 +268,7 @@ function localCard() {
     onClick: async () => {
       out.textContent = '准备中…';
       try {
-        const { transcribeLocal } = await import('./speech.js?v=1.8.0');
+        const { transcribeLocal } = await import('./speech.js?v=1.9.0');
         const blob = makeTone();
         const t0 = Date.now();
         const txt = await transcribeLocal(blob, {
@@ -376,7 +376,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=1.8.0');
+          const { llmChat } = await import('./ai.js?v=1.9.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
@@ -608,7 +608,7 @@ export async function about() {
   const body = el('div', { style: 'padding:0 18px 20px' });
   root.append(body);
   body.append(el('div', { class: 'center', style: 'padding:22px 0' },
-    el('div', { html: '<svg width="64" height="64" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#000"/><path d="M8 32c4-1.5 5.5-7 8.5-7s4.5 5.5 7 5.5 4-8 7-8 4 2.5 5.5 4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><text x="24" y="22" fill="#fff" font-size="8" font-family="system-ui" font-weight="700" text-anchor="middle">皓月翻译</text></svg>' }),
+    el('img', { src: 'logo.png', width: 72, height: 72, alt: '皓月翻译', style: 'border-radius:18px' }),
     el('div', { style: 'font-size:20px;font-weight:720;margin-top:10px', text: '皓月翻译' }),
     el('div', { class: 'tiny dim', text: 'v1.0 · 独立网页实现' })));
   body.append(el('div', { class: 'list', style: 'margin-top:10px' },
