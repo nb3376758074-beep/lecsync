@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.7.1';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.7.1';
-import { llmReady } from './ai.js?v=1.7.1';
-import { translateText } from './speech.js?v=1.7.1';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.8.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.8.0';
+import { llmReady } from './ai.js?v=1.8.0';
+import { translateText } from './speech.js?v=1.8.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -167,7 +167,7 @@ export async function settings() {
     item({ icon: I.trash, title: L.t('clearData'), danger: true, onClick: clearAll }),
   ));
 
-  body.append(el('div', { class: 'tiny dim center', style: 'margin-top:18px' }, 'LecSync Web 1.0 · ' + L.t('proTitle')));
+  body.append(el('div', { class: 'tiny dim center', style: 'margin-top:18px' }, '皓月翻译 1.0 · ' + L.t('proTitle')));
   return { node: root, title: L.t('settings') };
 }
 
@@ -268,7 +268,7 @@ function localCard() {
     onClick: async () => {
       out.textContent = '准备中…';
       try {
-        const { transcribeLocal } = await import('./speech.js?v=1.7.1');
+        const { transcribeLocal } = await import('./speech.js?v=1.8.0');
         const blob = makeTone();
         const t0 = Date.now();
         const txt = await transcribeLocal(blob, {
@@ -376,7 +376,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=1.7.1');
+          const { llmChat } = await import('./ai.js?v=1.8.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
@@ -483,7 +483,7 @@ export async function invite() {
     el('div', { class: 'mono', style: 'font-size:28px;font-weight:700;letter-spacing:.08em;margin-top:6px', text: t.code })));
   body.append(el('div', { class: 'stack', style: 'margin-top:14px' },
     el('button', { class: 'btn primary block', text: L.t('copyCode'), onClick: () => copyText(t.code) }),
-    el('button', { class: 'btn ghost block', text: L.t('shareVia'), onClick: () => shareText(`加入我的 LecSync 团队：${t.name}\n邀请码：${t.code}\n${location.href.split('#')[0]}`) })));
+    el('button', { class: 'btn ghost block', text: L.t('shareVia'), onClick: () => shareText(`加入我的 皓月翻译 团队：${t.name}\n邀请码：${t.code}\n${location.href.split('#')[0]}`) })));
   body.append(el('div', { class: 'tiny dim', style: 'margin-top:14px', text: '邀请码只在本机生效（没有后端）。真实多人协作需要服务端账号体系。' }));
   return { node: root, title: L.t('invite') };
 }
@@ -500,7 +500,7 @@ export async function redeem() {
     onClick: () => {
       const v = input.value.trim().toUpperCase();
       if (!v) return toast(L.t('needText'));
-      store.data.team ||= { name: 'LecSync Team', code: v, members: [{ name: store.data.profile.name || 'Me', role: 'owner' }], createdAt: Date.now() };
+      store.data.team ||= { name: '皓月翻译 Team', code: v, members: [{ name: store.data.profile.name || 'Me', role: 'owner' }], createdAt: Date.now() };
       store.data.team.code = v;
       if (!store.data.team.members.some(m => m.role === 'member')) store.data.team.members.push({ name: 'Invited seat', role: 'member' });
       store.save(); toast('✓ 已激活'); setTimeout(() => nav('/team'), 500);
@@ -536,7 +536,7 @@ export async function voice() {
       el('button', {
         class: 'tiny dim', text: '试听', onClick: () => {
           if (!window.speechSynthesis) return toast('不支持朗读');
-          const u = new SpeechSynthesisUtterance('这是 LecSync 的朗读效果，先试听一下。');
+          const u = new SpeechSynthesisUtterance('这是 皓月翻译 的朗读效果，先试听一下。');
           u.voice = v; u.lang = v.lang; speechSynthesis.cancel(); speechSynthesis.speak(u);
         },
       })));
@@ -608,8 +608,8 @@ export async function about() {
   const body = el('div', { style: 'padding:0 18px 20px' });
   root.append(body);
   body.append(el('div', { class: 'center', style: 'padding:22px 0' },
-    el('div', { html: '<svg width="64" height="64" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#000"/><path d="M8 32c4-1.5 5.5-7 8.5-7s4.5 5.5 7 5.5 4-8 7-8 4 2.5 5.5 4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><text x="24" y="22" fill="#fff" font-size="8" font-family="system-ui" font-weight="700" text-anchor="middle">LecSync</text></svg>' }),
-    el('div', { style: 'font-size:20px;font-weight:720;margin-top:10px', text: 'LecSync Web' }),
+    el('div', { html: '<svg width="64" height="64" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#000"/><path d="M8 32c4-1.5 5.5-7 8.5-7s4.5 5.5 7 5.5 4-8 7-8 4 2.5 5.5 4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><text x="24" y="22" fill="#fff" font-size="8" font-family="system-ui" font-weight="700" text-anchor="middle">皓月翻译</text></svg>' }),
+    el('div', { style: 'font-size:20px;font-weight:720;margin-top:10px', text: '皓月翻译' }),
     el('div', { class: 'tiny dim', text: 'v1.0 · 独立网页实现' })));
   body.append(el('div', { class: 'list', style: 'margin-top:10px' },
     item({ icon: I.crown, title: L.t('proTitle'), sub: '所有付费权益已解锁', onClick: () => nav('/pro') }),
@@ -637,7 +637,7 @@ export async function auth() {
   root.append(header({ title: L.t('account'), back: () => nav('/me') }));
   const body = el('div', { class: 'auth' });
   root.append(body);
-  body.append(el('div', { class: 'logo' }, el('span', { text: 'LecSync' })));
+  body.append(el('div', { class: 'logo' }, el('span', { text: '皓月翻译' })));
   body.append(el('h1', { text: store.data.profile.name ? L.t('account') : L.t('signIn') }));
   body.append(el('div', { class: 'sub', text: '本地模式：不需要注册，数据只存在这台设备。' }));
 
