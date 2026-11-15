@@ -10,7 +10,7 @@ const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
 const st = {
   on: false, paused: false, startedAt: 0, elapsed: 0,
   session: null, lines: [], interim: '', rec: null, live: null,
-  manual: false, level: 0, timer: null, raf: null, refs: {},
+  manual: false, seg: false, level: 0, timer: null, raf: null, refs: {},
 };
 export const isRecording = () => st.on;
 export const isPaused = () => st.paused;
@@ -43,7 +43,7 @@ function heroTitle() {
   if (st.on) {
     t.append(el('div', { class: 'row', style: 'gap:8px;align-items:center' },
       el('span', { class: 'badge live', text: st.paused ? L.t('paused') : L.t('recording') }),
-      el('span', { class: 'small dim', text: st.manual ? '键盘听写' : (hasLiveSpeech() ? L.t('speechReady') : L.t('engineManual')) })));
+      el('span', { class: 'small dim', text: st.manual ? '键盘听写' : (st.seg ? '分片转写 · 约 6 秒一句' : (hasLiveSpeech() ? L.t('speechReady') : L.t('engineManual'))) })));
     t.append(el('div', { class: 'rec-title', text: st.session?.title || L.t('newSessionTitle') }));
     t.append(el('div', { class: 'rec-sub', text: `${L.t('unlimited')} · ${langName(store.settings.recognitionLang, L.lang)} → ${langName(store.settings.targetLang, L.lang)}` }));
   } else {
@@ -212,26 +212,37 @@ async function startRec() {
   st.session = { id: uid('ses'), title: '', lines: [], lang: s.recognitionLang, folderId: null };
   st.lines = []; st.interim = ''; st.elapsed = 0; st.paused = false;
   st.startedAt = Date.now(); st.on = true;
-  st.manual = (s.engine === 'manual') || (s.engine !== 'whisper' && !hasLiveSpeech());
+
+  const canSeg = !!(s.asrEndpoint && s.asrKey);
+  const liveOk = hasLiveSpeech() && s.engine !== 'manual' && s.engine !== 'whisper';
+  st.seg = !liveOk && canSeg;                       // 分片转写（iOS 主力路径）
+  st.manual = (s.engine === 'manual') || (!liveOk && !canSeg);
   reRender(); // paint the recording UI right away — never wait on the mic
 
-  if (!st.manual) {
+  if (liveOk) {
     st.live = makeLive(
       txt => pushLine(txt),
       txt => onInterim(txt),
       err => { if (err === 'denied') { st.manual = true; toast(L.t('micDenied'), 3200); reRender(); } },
       s.recognitionLang);
     if (st.live) st.live.start();
+    else if (canSeg) { st.seg = true; st.manual = false; }
     else { st.manual = true; toast(L.t('noSpeech'), 3200); reRender(); }
+  } else if (st.seg) {
+    toast('分片转写模式：约 6 秒一句，边说边出文字+译文', 4000);
+    setTimeout(() => {
+      if (st.on && !st.lines.length) toast('如果一直没出字，停止录音后会整段转写（分片转写个别浏览器不支持）', 5000);
+    }, 12000);
   }
 
   // audio capture runs in the background: playback + chunked ASR are optional extras
   (async () => {
     try {
       st.rec = makeRecorder();
-      const wantChunks = s.engine === 'whisper' && s.asrEndpoint;
+      const wantChunks = st.seg || (s.engine === 'whisper' && canSeg);
+      const timeslice = st.seg ? 6000 : 15000;
       await Promise.race([
-        st.rec.start(wantChunks ? blob => onAudioChunk(blob) : null, lvl => { st.level = lvl; }),
+        st.rec.start(wantChunks ? blob => onAudioChunk(blob) : null, lvl => { st.level = lvl; }, timeslice),
         sleep(5000),
       ]);
     } catch (e) {
