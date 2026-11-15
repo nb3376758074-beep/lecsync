@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.6.3';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.6.3';
-import { llmReady } from './ai.js?v=1.6.3';
-import { translateText } from './speech.js?v=1.6.3';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=1.7.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=1.7.0';
+import { llmReady } from './ai.js?v=1.7.0';
+import { translateText } from './speech.js?v=1.7.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -151,6 +151,7 @@ export async function settings() {
         actions: [
           { label: L.t('engineBrowser'), onClick: () => { s.engine = 'browser'; store.save(); rerender(); } },
           { label: L.t('engineWhisper'), onClick: () => { s.engine = 'whisper'; store.save(); nav('/settings/asr'); } },
+          { label: '本地模型（不联网、不用 key，慢一点）', onClick: () => { s.engine = 'local'; store.save(); toast('已切换到本地模型'); rerender(); } },
           { label: L.t('engineManual'), onClick: () => { s.engine = 'manual'; store.save(); rerender(); } },
         ],
       }),
@@ -240,11 +241,65 @@ export async function settingsSub({ sub }) {
     body.append(field('API Key', 'asrKey', 'sk-…', 'password'));
     body.append(field('模型', 'asrModel', 'whisper-1'));
     body.append(testButton('asr'));
+    body.append(localCard());
     body.append(diagCard());
   } else {
     body.append(el('div', { class: 'small muted', style: 'margin-top:12px', text: '未知设置项' }));
   }
   return { node: root, title: L.t('settings') };
+}
+
+function localCard() {
+  const s = store.settings;
+  const on = s.engine === 'local';
+  const out = el('div', { class: 'tiny dim', style: 'margin-top:8px;line-height:1.6;white-space:pre-wrap' });
+  const btn = el('button', {
+    class: 'btn block ' + (on ? 'primary' : 'ghost'), style: 'margin-top:10px',
+    text: on ? '✓ 已启用本地模型（点击关闭）' : '改用本地模型（不联网、不用 key）',
+    onClick: () => {
+      s.engine = on ? 'auto' : 'local';
+      store.save();
+      toast(on ? '已切回云端接口' : '已启用本地模型：录音结束后在手机里识别');
+      rerender();
+    },
+  });
+  const test = el('button', {
+    class: 'btn sm ghost block', style: 'margin-top:8px', text: '测试本地模型（下载并跑一次）',
+    onClick: async () => {
+      out.textContent = '准备中…';
+      try {
+        const { transcribeLocal } = await import('./speech.js?v=1.7.0');
+        const blob = makeTone();
+        const t0 = Date.now();
+        const txt = await transcribeLocal(blob, {
+          model: s.localModel || 'Xenova/whisper-tiny',
+          onProgress: m => { out.textContent = m; },
+        });
+        out.textContent = `完成，用时 ${Math.round((Date.now() - t0) / 1000)}s\n识别结果：${txt || '(空)'}`;
+      } catch (e) {
+        out.textContent = '失败：' + String(e.message || e).slice(0, 200);
+      }
+    },
+  });
+  return el('div', { class: 'card', style: 'margin-top:14px' },
+    el('div', { class: 'small', style: 'font-weight:640', text: '本地模型（免费，不依赖账号余额）' }),
+    el('div', { class: 'tiny dim', style: 'margin-top:4px;line-height:1.6' },
+      '在手机浏览器里直接运行 Whisper（WASM）。首次要下载约 40MB 模型，之后缓存；识别速度比云端慢，适合录完再转。'),
+    btn, test, out);
+}
+
+/* 生成 0.8 秒正弦音，用于本地模型自检（能跑通流程即可） */
+function makeTone() {
+  const sr = 16000, dur = 1.0, n = sr * dur;
+  const buf = new ArrayBuffer(44 + n * 2);
+  const dv = new DataView(buf);
+  const ws = (o, str) => { for (let i = 0; i < str.length; i++) dv.setUint8(o + i, str.charCodeAt(i)); };
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true);
+  dv.setUint16(34, 16, true); ws(36, 'data'); dv.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) dv.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 440 * i / sr) * 8000, true);
+  return new Blob([buf], { type: 'audio/wav' });
 }
 
 function diagCard() {
@@ -321,7 +376,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=1.6.3');
+          const { llmChat } = await import('./ai.js?v=1.7.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
