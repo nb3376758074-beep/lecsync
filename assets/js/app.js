@@ -1,11 +1,11 @@
 /* ============ LecSync Web · router & boot ============ */
-import { $, el, I, L, store } from './core.js?v=1.9.0';
-import { nav, path, mount, setTabState, viewEl } from './ui.js?v=1.9.0';
-import * as Record from './screen-record.js?v=1.9.0';
-import * as Session from './screen-session.js?v=1.9.0';
-import * as Library from './screen-library.js?v=1.9.0';
-import * as Me from './screen-me.js?v=1.9.0';
-import * as Tools from './screen-tools.js?v=1.9.0';
+import { $, el, I, L, store } from './core.js?v=2.0.0';
+import { nav, path, mount, setTabState, viewEl } from './ui.js?v=2.0.0';
+import * as Record from './screen-record.js?v=2.0.0';
+import * as Session from './screen-session.js?v=2.0.0';
+import * as Library from './screen-library.js?v=2.0.0';
+import * as Me from './screen-me.js?v=2.0.0';
+import * as Tools from './screen-tools.js?v=2.0.0';
 
 const routes = [
   { re: /^\/$/, render: Record.render, tab: 'record' },
@@ -30,6 +30,7 @@ const routes = [
   { re: /^\/about$/, render: Me.about },
   { re: /^\/upload$/, render: Tools.upload },
   { re: /^\/translate$/, render: Tools.translate },
+  { re: /^\/photo$/, render: Tools.photo },
   { re: /^\/dictation$/, render: Tools.dictation },
   { re: /^\/dictation\/words$/, render: Tools.dictationWords },
   { re: /^\/auth$/, render: Me.auth },
@@ -96,14 +97,14 @@ export function boot() {
   route();
 
   if (!store.settings.seenOnboarding) {
-    import('./screen-onboard.js?v=1.9.0').then(m => m.show());
+    import('./screen-onboard.js?v=2.0.0').then(m => m.show());
   }
   // iOS hint once
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
   if (isIOS && !standalone && !store.settings.iosTipDismissed) {
     setTimeout(() => {
-      import('./ui.js?v=1.9.0').then(({ sheet }) => {
+      import('./ui.js?v=2.0.0').then(({ sheet }) => {
         const s = sheet({
           title: '装到主屏幕（30 秒）',
           body: `<div class="stack">
@@ -123,6 +124,6 @@ export function boot() {
   // keyboard shortcuts (desktop testing)
   document.addEventListener('keydown', e => {
     if (e.target.matches('input,textarea')) return;
-    if (e.key === 'Escape') import('./ui.js?v=1.9.0').then(m => m.closeTopSheet());
+    if (e.key === 'Escape') import('./ui.js?v=2.0.0').then(m => m.closeTopSheet());
   });
 }
