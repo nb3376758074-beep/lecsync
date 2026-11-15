@@ -1,0 +1,24 @@
+{
+  "name": "LecSync · 录音转录纪要",
+  "short_name": "LecSync",
+  "description": "实时转录、双语字幕、AI 纪要。全部功能免费解锁。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0b0b0c",
+  "lang": "zh-CN",
+  "categories": ["productivity", "education"],
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "开始录音", "url": "./index.html#/", "description": "直接进入录音页" },
+    { "name": "全部会话", "url": "./index.html#/folders", "description": "查看历史录音" },
+    { "name": "AI 对话", "url": "./index.html#/chats", "description": "围绕录音提问" }
+  ]
+}
