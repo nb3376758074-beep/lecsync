@@ -1,5 +1,5 @@
 /* LecSync Web · service worker: app shell + offline */
-const V = 'lcs-v1.5.0';
+const V = 'lcs-v1.5.1';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './assets/css/app.css',
@@ -38,6 +38,22 @@ self.addEventListener('fetch', e => {
     })());
     return;
   }
+  // 代码类资源：网络优先，拿了就更新缓存；断网才用缓存（保证每次发版都能生效）
+  const codeLike = /\.(?:js|mjs|css|html|webmanifest)$/i.test(url.pathname);
+  if (codeLike) {
+    e.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) { const c = await caches.open(V); c.put(req, fresh.clone()); }
+        return fresh;
+      } catch {
+        const hit = await caches.match(req);
+        return hit || Response.error();
+      }
+    })());
+    return;
+  }
+
   e.respondWith((async () => {
     const hit = await caches.match(req);
     if (hit) return hit;
