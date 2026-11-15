@@ -1,11 +1,11 @@
 /* ============ screens: Upload, Translate, Dictation ============ */
 import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js';
-import { header, nav, sheet, pickLanguage, copyText, emptyState } from './ui.js';
-import { translateText, splitSentences, transcribeBlob, makeLive, hasLiveSpeech } from './speech.js';
+import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js';
+import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js';
 import { localDigest, suggestTitle } from './ai.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const rerender = () => { location.hash = location.hash; };
+const rerender = () => refresh();
 
 /* ================= Upload / import ================= */
 export async function upload() {
@@ -158,18 +158,58 @@ export async function translate() {
   async function addSentence(txt) {
     const ln = { t: tr.lines.length * 3, text: txt, tr: '' };
     tr.lines.push(ln); paint();
-    try { ln.tr = await translateText(txt, tr.to, tr.src); paint(); } catch {}
+    try { ln.tr = await translateText(txt, tr.to, 'auto'); paint(); } catch {}
   }
+
+  const cfg = () => store.settings;
+  const canAsr = () => !!(cfg().asrEndpoint && cfg().asrKey);
+
   function startLive() {
-    if (!hasLiveSpeech()) {
-      toast('这个浏览器没有实时识别，请用 iOS 键盘麦克风或配置 Whisper 接口');
+    if (tr.on) return;
+    // 1) 有浏览器识别（Chrome/Edge）：直接实时
+    if (hasLiveSpeech()) {
+      tr.on = true;
+      tr.live = makeLive(t => addSentence(t), null, e => toast('识别出错：' + e), cfg().recognitionLang);
+      tr.live?.start(); rerender();
       return;
     }
-    tr.on = true;
-    tr.live = makeLive(t => addSentence(t), null, () => { }, store.settings.recognitionLang);
-    tr.live?.start(); rerender();
+    // 2) iOS 等没有识别接口：用分片 ASR 做“准实时同传”
+    if (canAsr()) { startSeg(); return; }
+    toast('还没配置转写：先打开一次 setup 配置链接，或到 设置 → 转写接口 填 key', 6000);
   }
-  function stopLive() { tr.on = false; tr.live?.stop(); tr.live = null; rerender(); }
+
+  async function startSeg() {
+    tr.on = true; rerender();
+    try {
+      tr.rec = makeRecorder();
+      let busy = false;
+      await tr.rec.start(async blob => {
+        if (busy || !blob || blob.size < 1000) return;
+        busy = true;
+        try {
+          const txt = await transcribeBlob(blob, {
+            endpoint: cfg().asrEndpoint, key: cfg().asrKey, model: cfg().asrModel,
+          });
+          if (txt) await addSentence(txt);
+        } catch (e) {
+          toast('转写失败：' + String(e.message || e).slice(0, 70), 5000);
+        }
+        busy = false;
+      }, () => {}, 6000);
+      toast('分片同传中：约 6 秒一句，边说边出双语', 4000);
+    } catch (e) {
+      tr.on = false; rerender();
+      toast('麦克风打不开：' + String(e.message || e).slice(0, 60), 5000);
+    }
+  }
+
+  async function stopLive() {
+    tr.on = false;
+    tr.live?.stop(); tr.live = null;
+    try { await tr.rec?.stop(); } catch {}
+    tr.rec = null;
+    rerender();
+  }
 
   // text translation
   const ta = el('textarea', { class: 'input', rows: 4, placeholder: '输入或粘贴要翻译的文字…', style: 'margin-top:16px' });
