@@ -62,6 +62,9 @@
     db.settings.asrKey = key;
     db.settings.engine = 'auto';
     localStorage.setItem(KEY, JSON.stringify(db));
+    localStorage.setItem('lcs.asrKey', key);
+    localStorage.setItem('lcs.asrEndpoint', endpoint);
+    localStorage.setItem('lcs.asrModel', model);
     // 清掉地址栏里的 key，别留在历史记录里
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
     done(true, '转写接口：' + endpoint + '\n模型：' + model + '\nKey 已保存（' + key.slice(0, 6) + '…' + key.slice(-4) + '）');
