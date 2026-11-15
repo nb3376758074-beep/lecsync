@@ -1,6 +1,6 @@
 {
-  "name": "LecSync · 录音转录纪要",
-  "short_name": "LecSync",
+  "name": "皓月翻译 · 录音转录纪要",
+  "short_name": "皓月",
   "description": "实时转录、双语字幕、AI 纪要。全部功能免费解锁。",
   "start_url": "./index.html",
   "scope": "./",
