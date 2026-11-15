@@ -14,7 +14,7 @@ export function makeRecorder() {
     return '';
   };
 
-  async function start(onChunk, onLevel) {
+  async function start(onChunk, onLevel, timeslice = 15000) {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('no-mic-api');
     stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 },
@@ -25,7 +25,7 @@ export function makeRecorder() {
       : new MediaRecorder(stream);
     state.mime = rec.mimeType || state.mime || 'audio/webm';
     rec.ondataavailable = e => { if (e.data && e.data.size) { chunks.push(e.data); onChunk && onChunk(e.data); } };
-    rec.start(15000); // 15s slices: also used for chunked ASR
+    rec.start(timeslice); // 分片：既用于分片转写，也用于最终成片
     startedAt = Date.now();
     state.recording = true; state.paused = false;
 
@@ -49,7 +49,7 @@ export function makeRecorder() {
   function pause() { if (rec && rec.state === 'recording') { rec.pause(); state.paused = true; stopLevel(); } }
   function resume() {
     if (rec && rec.state === 'paused') { rec.resume(); state.paused = false; }
-    else if (state.mime && rec && rec.state === 'inactive') { try { rec.start(15000); state.paused = false; } catch {} }
+    else if (state.mime && rec && rec.state === 'inactive') { try { rec.start(6000); state.paused = false; } catch {} }
   }
   function stopLevel() { if (rafId) cancelAnimationFrame(rafId); rafId = null; }
 
