@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>iPhone 安装指南 · LecSync</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LecSync">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 20px calc(env(safe-area-inset-bottom,0px) + 30px)}
+  .step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .step:last-child{border-bottom:0}
+  .num{width:28px;height:28px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:13.5px;flex:none}
+  .cta{position:sticky;bottom:0;padding:14px 0 calc(env(safe-area-inset-bottom,0px) + 14px);background:linear-gradient(to top,var(--bg) 60%,transparent)}
+  .kbd{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:2px 6px;border-radius:6px}
+  h1{font-size:25px;font-weight:740;letter-spacing:-.03em;margin:0 0 6px}
+  .lead{font-size:14.5px;color:var(--text-2);line-height:1.55;margin:0 0 18px}
+  .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="badge-row">
+    <span class="badge pro">全部功能已解锁</span>
+    <span class="badge ok">免费</span>
+    <span class="badge">无需安装 App</span>
+  </div>
+  <h1>装到 iPhone 主屏幕</h1>
+  <p class="lead">LecSync 网页版是标准 PWA：装完有独立图标、全屏无地址栏、能离线打开。必须用 <b>Safari</b> 打开（微信 / QQ 内置浏览器不支持安装）。</p>
+
+  <div class="card">
+    <div class="step"><div class="num">1</div><div>
+      <div class="small" style="font-weight:660">用 Safari 打开这个页面</div>
+      <div class="tiny dim">如果你现在在微信里，点右上角「⋯」→「在 Safari 中打开」</div>
+    </div></div>
+    <div class="step"><div class="num">2</div><div>
+      <div class="small" style="font-weight:660">点底部中间的「分享」按钮 <span class="kbd">⬆️</span></div>
+      <div class="tiny dim">iPhone 上在屏幕最下方，iPad 上在右上角</div>
+    </div></div>
+    <div class="step"><div class="num">3</div><div>
+      <div class="small" style="font-weight:660">往下滑，选「添加到主屏幕」</div>
+      <div class="tiny dim">找不到就滑到底部「编辑操作」里添加</div>
+    </div></div>
+    <div class="step"><div class="num">4</div><div>
+      <div class="small" style="font-weight:660">点右上角「添加」</div>
+      <div class="tiny dim">名称默认 LecSync，图标已内置</div>
+    </div></div>
+    <div class="step"><div class="num">5</div><div>
+      <div class="small" style="font-weight:660">回桌面点「LecSync」图标</div>
+      <div class="tiny dim">第一次会问麦克风权限 → 选「允许」</div>
+    </div></div>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:700;margin:26px 0 10px">录音怎么出文字</h2>
+  <div class="card">
+    <div class="tiny muted" style="line-height:1.7">
+      iOS 的 Safari <b>没有</b>网页实时语音识别接口（这是苹果的限制）。所以网页版给你三条都能用的路：
+    </div>
+    <div class="stack" style="margin-top:10px">
+      <div class="row" style="gap:10px"><span class="badge ok">最省事</span><div class="small">点录音 → 点输入框 → 键盘上点 🎤 说话，停顿自动切句、自动翻译、自动进会话</div></div>
+      <div class="row" style="gap:10px"><span class="badge">最准</span><div class="small">在「设置 → 转写接口」填一个 Whisper 兼容地址（OpenAI / 硅基流动 / 本地），边录边转</div></div>
+      <div class="row" style="gap:10px"><span class="badge">最快</span><div class="small">别的设备转好的文字，复制进「上传 → 粘贴导入」</div></div>
+    </div>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:700;margin:26px 0 10px">和原版对照</h2>
+  <div class="card" style="padding:0">
+    <table class="min">
+      <tr><th>原来要付费的</th><th>网页版</th></tr>
+      <tr><td>每月 120 分钟录音上限</td><td>不限</td></tr>
+      <tr><td>每天 5 条 AI 提问</td><td>不限</td></tr>
+      <tr><td>同声传译 / 双语字幕</td><td>已开</td></tr>
+      <tr><td>导出附 AI 纪要</td><td>已开（TXT/SRT/VTT/MD）</td></tr>
+      <tr><td>云端同步 / 团队共享</td><td>本机存储 + 导出分享</td></tr>
+    </table>
+  </div>
+
+  <h2 style="font-size:16px;font-weight:700;margin:26px 0 10px">常见问题</h2>
+  <div class="card">
+    <div class="stack sm tiny" style="line-height:1.7">
+      <div><b>点录音没反应？</b> 必须 https + Safari；设置 → Safari → 麦克风 允许；iOS 14.5 以上。</div>
+      <div><b>图标是网页缩略图？</b> 删掉重加一次，图标已内置。</div>
+      <div><b>数据会丢吗？</b> 存在 Safari 本地存储里，「设置 → 导出全部数据」可以备份成 JSON。</div>
+      <div><b>能给别人用吗？</b> 能，把这个网址发给他即可。</div>
+    </div>
+  </div>
+
+  <div class="cta">
+    <a class="btn primary block" href="./index.html" style="text-decoration:none">打开 LecSync →</a>
+  </div>
+</div>
+</body>
+</html>
