@@ -174,13 +174,13 @@ function transcriptTab(s) {
 
 async function oneTranslate(s, l) {
   const to = s.targetLang || store.settings.targetLang;
-  const from = s.lang || store.settings.recognitionLang;
+  const from = 'auto';
   try { l.tr = await translateText(l.text, to, from); store.save(); }
   catch { toast(L.t('translating')); }
 }
 async function translateAll(s) {
   const to = s.targetLang || store.settings.targetLang;
-  const from = s.lang || store.settings.recognitionLang;
+  const from = 'auto';
   toast(L.t('translating') + ' 0/' + s.lines.length, 1400);
   let done = 0;
   for (const l of s.lines) {
