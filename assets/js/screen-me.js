@@ -224,14 +224,52 @@ export async function settingsSub({ sub }) {
     body.append(field('API Key', 'asrKey', 'sk-…', 'password'));
     body.append(field('模型', 'asrModel', 'whisper-1'));
     body.append(testButton('asr'));
+    body.append(diagCard());
   } else {
     body.append(el('div', { class: 'small muted', style: 'margin-top:12px', text: '未知设置项' }));
   }
   return { node: root, title: L.t('settings') };
 }
 
-function testButton(kind) {
-  const out = el('div', { class: 'tiny dim', style: 'margin-top:10px' });
+function diagCard() {
+  const out = el('pre', {
+    class: 'tiny', style: 'white-space:pre-wrap;margin:10px 0 0;color:var(--text-2);line-height:1.5',
+    text: '点下面的按钮做一次真实网络测试',
+  });
+  const btn = el('button', {
+    class: 'btn ghost block', style: 'margin-top:14px', text: '诊断：翻译 + 转写',
+    onClick: async () => {
+      const s = store.settings;
+      const lines = [];
+      lines.push('目标语言: ' + s.targetLang);
+      lines.push('自动翻译: ' + (s.autoTranslate ? '开' : '关'));
+      lines.push('接口: ' + (s.asrEndpoint || '(空)'));
+      lines.push('Key: ' + (s.asrKey ? s.asrKey.slice(0, 6) + '…' + s.asrKey.slice(-4) : '(空)'));
+      out.textContent = lines.join('\n') + '\n\n翻译测试中…';
+      try {
+        const t0 = Date.now();
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent((s.targetLang || 'zh-CN').split('-')[0])}&dt=t&q=${encodeURIComponent('Сегодня мы изучали линейную алгебру')}`;
+        const r = await fetch(url);
+        const txt = await r.text();
+        lines.push(`\n翻译 HTTP ${r.status} (${Date.now() - t0}ms)`);
+        lines.push('返回前 120 字: ' + txt.slice(0, 120));
+        try {
+          const j = JSON.parse(txt);
+          const tr = (j?.[0] || []).map(x => x?.[0] || '').join('').trim();
+          lines.push('解析结果: ' + (tr || '(空)'));
+        } catch (e) { lines.push('JSON 解析失败'); }
+      } catch (e) {
+        lines.push('\n翻译请求失败: ' + String(e.message || e));
+      }
+      out.textContent = lines.join('\n');
+    },
+  });
+  return el('div', { class: 'card', style: 'margin-top:16px' },
+    el('div', { class: 'small', style: 'font-weight:640', text: '诊断（把这段结果发我）' }),
+    btn, out);
+}
+
+function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: 'margin-top:10px' });
   const btn = el('button', {
     class: 'btn ghost block', style: 'margin-top:14px', text: L.t('testConn'),
     onClick: async () => {
