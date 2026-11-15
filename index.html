@@ -43,35 +43,36 @@
 <div id="app"></div>
 <noscript style="padding:24px;display:block;font-family:system-ui">这个网页需要 JavaScript。</noscript>
 <script>
-  // 自愈：如果 4 秒后还没进到应用（多半是旧的 Service Worker 把模块缓存坏了），
-  // 自动注销 SW + 清缓存 + 重载一次。
+  // 自愈：每次打开都先卸掉旧 Service Worker + 清缓存；3 秒还没进应用就带新参数重载一次
   (function () {
-    var FIXED = 'lcs.sw.selffix';
+    var FIX = 'lcs.selfheal.v3';
+    function booted() { return !!(document.querySelector('.tabbar') || document.querySelector('#view .rec-title')); }
+    function reload() { location.replace(location.pathname + '?v=' + Date.now()); }
+    function clean() {
+      var jobs = [];
+      if ('serviceWorker' in navigator) {
+        jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+        }));
+      }
+      if (window.caches) {
+        jobs.push(caches.keys().then(function (ks) {
+          return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+        }));
+      }
+      return Promise.all(jobs);
+    }
+    clean().then(function () {}, function () {});
     setTimeout(function () {
-      var booted = document.querySelector('.tabbar') || document.querySelector('#view .rec-title');
-      if (booted) return;
-      if (sessionStorage.getItem(FIXED) === '1') return; // 只自愈一次，避免死循环
-      sessionStorage.setItem(FIXED, '1');
-      var done = function () { location.replace(location.pathname + '?v=' + Date.now()); };
-      try {
-        var jobs = [];
-        if ('serviceWorker' in navigator) {
-          jobs.push(navigator.serviceWorker.getRegistrations().then(function (rs) {
-            return Promise.all(rs.map(function (r) { return r.unregister(); }));
-          }));
-        }
-        if (window.caches) {
-          jobs.push(caches.keys().then(function (ks) {
-            return Promise.all(ks.map(function (k) { return caches.delete(k); }));
-          }));
-        }
-        Promise.all(jobs).then(done, done);
-      } catch (e) { done(); }
-    }, 4000);
+      if (booted()) return;
+      if (sessionStorage.getItem(FIX) === '1') return;
+      sessionStorage.setItem(FIX, '1');
+      clean().then(reload, reload);
+    }, 3000);
   })();
 </script>
 <script type="module">
-  import { boot } from './assets/js/app.js?v=1.6.2';
+  import { boot } from './assets/js/app.js?v=1.6.3';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
@@ -84,27 +85,6 @@
   // wait for fonts/layout stability on iOS
   if (document.readyState === 'complete') go();
   else window.addEventListener('load', go, { once: true });
-
-  // 不再注册 Service Worker：宁可没有离线缓存，也不要旧缓存把新版本挡住。
-  // 同时把已经装过的 SW 卸掉、缓存清掉（一次性）。
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        if (regs.length) {
-          await Promise.all(regs.map(r => r.unregister()));
-          if (window.caches) {
-            const ks = await caches.keys();
-            await Promise.all(ks.map(k => caches.delete(k)));
-          }
-          if (!sessionStorage.getItem('lcs.unregistered')) {
-            sessionStorage.setItem('lcs.unregistered', '1');
-            location.replace(location.pathname + '?v=' + Date.now());
-          }
-        }
-      } catch {}
-    });
-  }
 </script>
 </body>
 </html>
