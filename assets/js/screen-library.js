@@ -1,12 +1,11 @@
 /* ============ screens: Folders, Chats, Trash, Search, Shared ============ */
 import { el, I, L, store, toast, fmtAgo, fmtDate, fmtClock, uid, langName } from './core.js';
-import { header, nav, sheet, confirmBox, promptBox, emptyState, shareText } from './ui.js';
+import { header, nav, sheet, confirmBox, promptBox, emptyState, shareText, refresh } from './ui.js';
 import { sessionItem } from './screen-record.js';
 import { askAI, llmReady, localAnswer } from './ai.js';
 
-const rl = () => import('./screen-library.js'); // self (for re-render)
 function rerender() {
-  import('./app.js').then(() => { location.hash = location.hash; });
+  refresh();
 }
 
 /* ---------------- Folders ---------------- */
