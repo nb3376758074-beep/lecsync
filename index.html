@@ -43,7 +43,7 @@
 <div id="app"></div>
 <noscript style="padding:24px;display:block;font-family:system-ui">这个网页需要 JavaScript。</noscript>
 <script type="module">
-  import { boot } from './assets/js/app.js?v=1.5.1';
+  import { boot } from './assets/js/app.js?v=1.6.0';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
@@ -59,7 +59,7 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=1.5.1').catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=1.6.0').catch(() => {});
     });
   }
 </script>
