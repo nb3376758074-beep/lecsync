@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=1.6.3';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=1.6.3';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText } from './speech.js?v=1.6.3';
-import { localDigest, suggestTitle } from './ai.js?v=1.6.3';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=1.7.0';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=1.7.0';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=1.7.0';
+import { localDigest, suggestTitle } from './ai.js?v=1.7.0';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
@@ -383,14 +383,24 @@ async function stopRec() {
   if (store.settings.autoDigest && lines.length) session.digest = localDigest(session);
   store.save();
 
-  // 录音后自动转写：没实时识别（iOS）但有转写接口时，把整段音频送去转写
+  // 录音后自动转写：没有实时识别（iOS）时，把整段音频送去转写
   const cfg = store.settings;
-  if (blob && !lines.length && cfg.asrEndpoint && cfg.asrKey) {
-    toast('正在转写录音…', 4000);
+  if (blob && !lines.length) {
+    const useLocal = cfg.engine === 'local' || !(cfg.asrEndpoint && cfg.asrKey);
+    toast(useLocal ? '正在用本地模型转写（首次需下载模型）…' : '正在转写录音…', 5000);
     try {
-      const txt = await transcribeBlob(blob, {
-        endpoint: cfg.asrEndpoint, key: cfg.asrKey, model: cfg.asrModel, language: cfg.recognitionLang,
-      });
+      let txt = '';
+      if (useLocal) {
+        txt = await transcribeLocal(blob, {
+          model: cfg.localModel || 'Xenova/whisper-tiny',
+          language: cfg.recognitionLang,
+          onProgress: m => toast(m, 3000),
+        });
+      } else {
+        txt = await transcribeBlob(blob, {
+          endpoint: cfg.asrEndpoint, key: cfg.asrKey, model: cfg.asrModel, language: cfg.recognitionLang,
+        });
+      }
       const parts = splitSentences(txt || '');
       if (parts.length) {
         const step = Math.max(2, Math.round((duration || parts.length * 4) / parts.length));
@@ -401,7 +411,7 @@ async function stopRec() {
         toast(`已转写 ${parts.length} 句`);
       }
     } catch (e) {
-      toast('自动转写失败：' + String(e.message || e).slice(0, 60), 4000);
+      toast('自动转写失败：' + String(e.message || e).slice(0, 70), 5000);
     }
   }
 
