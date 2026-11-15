@@ -308,13 +308,15 @@ function pushLine(text) {
     box.scrollTop = box.scrollHeight;
   }
   const s = store.settings;
-  if (s.autoTranslate && s.targetLang && s.targetLang.split('-')[0] !== s.recognitionLang.split('-')[0]) {
+  // 只要设了目标语言就翻（源语言交给引擎自动检测；不再拿“识别语言”去比，否则俄→中会被误判成同语言而跳过）
+  if (s.autoTranslate && s.targetLang) {
     translateText(ln.text, s.targetLang, 'auto').then(tr => {
       if (!tr) return;
+      if (tr.trim() === ln.text.trim()) return; // 本来就是目标语言，不重复显示
       ln.tr = tr;
       const tx = st.refs.lines?.querySelector(`.line[data-i="${idx}"] .tx`);
       if (tx && !$('.tr', tx)) tx.append(el('span', { class: 'tr', text: tr }));
-    }).catch(() => {});
+    }).catch(e => console.warn('translate failed', e));
   }
   maybeAssist();
 }
