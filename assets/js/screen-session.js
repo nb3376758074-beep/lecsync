@@ -1,8 +1,8 @@
 /* ============ screen: Session detail (transcript / digest / files / chat) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtDate, fmtDur, langName, audioStore, bytes } from './core.js?v=1.6.3';
-import { header, nav, sheet, confirmBox, promptBox, copyText, shareText, pickLanguage, emptyState } from './ui.js?v=1.6.3';
-import { localDigest, askAI, llmReady, toTxt, toSrt, toVtt, toMarkdown, download, safeName } from './ai.js?v=1.6.3';
-import { translateText, transcribeBlob, splitSentences } from './speech.js?v=1.6.3';
+import { $, el, I, L, store, toast, fmtClock, fmtDate, fmtDur, langName, audioStore, bytes } from './core.js?v=1.7.0';
+import { header, nav, sheet, confirmBox, promptBox, copyText, shareText, pickLanguage, emptyState } from './ui.js?v=1.7.0';
+import { localDigest, askAI, llmReady, toTxt, toSrt, toVtt, toMarkdown, download, safeName } from './ai.js?v=1.7.0';
+import { translateText, transcribeBlob, splitSentences, transcribeLocal } from './speech.js?v=1.7.0';
 
 let ui = { tab: 'transcript', q: '', showTr: true, sel: null };
 
@@ -122,7 +122,7 @@ function transcriptTab(s) {
     }),
     el('button', {
       class: 'btn sm ghost', text: L.t('fullscreenSub'),
-      onClick: () => import('./ui.js?v=1.6.3').then(m => m.sheet({ title: L.t('fullscreenSub'), body: el('div', { class: 'small muted', text: '录音页右上角的全屏按钮可以在录音时放大字幕；这里可以用浏览器全屏查看转录。' }), actions: [{ label: L.t('ok'), kind: 'primary', onClick: () => document.documentElement.requestFullscreen?.() }] })),
+      onClick: () => import('./ui.js?v=1.7.0').then(m => m.sheet({ title: L.t('fullscreenSub'), body: el('div', { class: 'small muted', text: '录音页右上角的全屏按钮可以在录音时放大字幕；这里可以用浏览器全屏查看转录。' }), actions: [{ label: L.t('ok'), kind: 'primary', onClick: () => document.documentElement.requestFullscreen?.() }] })),
     }));
   wrap.append(search, row);
 
@@ -195,14 +195,23 @@ async function translateAll(s) {
 
 async function transcribeSession(s) {
   const cfg = store.settings;
-  if (!cfg.asrEndpoint || !cfg.asrKey) { toast('先在设置里填转写接口和 Key'); nav('/settings/asr'); return; }
-  toast('正在转写…', 4000);
+  const useLocal = cfg.engine === 'local' || !(cfg.asrEndpoint && cfg.asrKey);
+  toast(useLocal ? '正在用本地模型转写（首次要下载模型）…' : '正在转写…', 5000);
   try {
     const blob = s.audioId ? await audioStore.get(s.audioId) : null;
     if (!blob) { toast('这段录音没有音频文件'); return; }
-    const txt = await transcribeBlob(blob, {
-      endpoint: cfg.asrEndpoint, key: cfg.asrKey, model: cfg.asrModel, language: s.lang || cfg.recognitionLang,
-    });
+    let txt = '';
+    if (useLocal) {
+      txt = await transcribeLocal(blob, {
+        model: cfg.localModel || 'Xenova/whisper-tiny',
+        language: s.lang || cfg.recognitionLang,
+        onProgress: m => toast(m, 3000),
+      });
+    } else {
+      txt = await transcribeBlob(blob, {
+        endpoint: cfg.asrEndpoint, key: cfg.asrKey, model: cfg.asrModel, language: s.lang || cfg.recognitionLang,
+      });
+    }
     const parts = splitSentences(txt || '');
     if (!parts.length) { toast('没有识别到内容'); return; }
     const step = Math.max(2, Math.round((s.duration || parts.length * 4) / parts.length));
@@ -213,7 +222,7 @@ async function transcribeSession(s) {
     toast(`转写完成 · ${parts.length} 句`);
     rerender(s.id);
   } catch (e) {
-    toast('转写失败：' + String(e.message || e).slice(0, 80), 4000);
+    toast('转写失败：' + String(e.message || e).slice(0, 80), 5000);
   }
 }
 
