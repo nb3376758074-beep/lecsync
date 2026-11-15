@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=1.6.2';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=1.6.2';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText } from './speech.js?v=1.6.2';
-import { localDigest, suggestTitle } from './ai.js?v=1.6.2';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=1.6.3';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=1.6.3';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText } from './speech.js?v=1.6.3';
+import { localDigest, suggestTitle } from './ai.js?v=1.6.3';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
