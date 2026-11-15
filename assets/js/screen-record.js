@@ -32,7 +32,7 @@ export async function render() {
   body.append(heroTitle());
   body.append(timerBlock());
   if (st.on) body.append(controls(), liveCard(), quotaCard());
-  else body.append(controls(), startHint(), quickActions(), recentBlock());
+  else body.append(controls(), startHint(), asrHint(), quickActions(), recentBlock());
   root.append(body);
   setTabState('record', { recording: st.on });
   return { node: root, title: st.on ? L.t('recording') : L.t('record') };
@@ -105,6 +105,23 @@ function controls() {
 }
 
 const startHint = () => el('div', { class: 'center tiny dim', style: 'padding:6px 0 2px', text: L.t('tapToStart') });
+
+function asrHint() {
+  const s = store.settings;
+  if (s.asrKey) {
+    return el('div', { class: 'card flat', style: 'margin-top:14px;padding:12px 14px' },
+      el('div', { class: 'row', style: 'gap:8px;align-items:center' },
+        el('span', { class: 'badge ok', text: '转写已就绪' }),
+        el('span', { class: 'tiny dim ellip', text: (s.asrModel || '') + ' · ' + (s.asrEndpoint || '').replace('https://', '') })));
+  }
+  return el('div', { class: 'card', style: 'margin-top:14px;padding:14px;border-color:var(--live)' },
+    el('div', { class: 'stack sm' },
+      el('div', { class: 'small', style: 'font-weight:660;color:var(--live)', text: '还没配置转写，录音不会有文字' }),
+      el('div', { class: 'tiny dim', style: 'line-height:1.6', text: '打开我发给你的那条 setup.html#key=... 链接一次即可（Safari 里打开，之后回到这个页面刷新）。' }),
+      el('div', { class: 'row', style: 'gap:8px;margin-top:4px' },
+        el('button', { class: 'btn sm ghost', text: '去设置', onClick: () => nav('/settings/asr') }),
+        el('button', { class: 'btn sm ghost', text: '刷新', onClick: () => location.reload() }))));
+}
 
 function quotaCard() {
   return el('div', { class: 'quotacard' },
@@ -263,10 +280,17 @@ function onInterim(txt) {
 
 async function onAudioChunk(blob) {
   const s = store.settings;
+  if (!s.asrEndpoint || !s.asrKey) { toast('转写未配置：先打开一次配置链接', 5000); return; }
+  if (!blob || blob.size < 1000) { console.warn('chunk too small', blob && blob.size); return; }
   try {
     const txt = await transcribeBlob(blob, { endpoint: s.asrEndpoint, key: s.asrKey, model: s.asrModel, language: s.recognitionLang });
     if (txt) pushLine(txt);
-  } catch (e) { console.warn('chunk asr failed', e); }
+    else console.warn('empty transcript for chunk');
+  } catch (e) {
+    const msg = String(e.message || e);
+    console.warn('chunk asr failed', msg);
+    toast('转写失败：' + msg.slice(0, 80), 5000);
+  }
 }
 
 function pushLine(text) {
