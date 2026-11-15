@@ -57,6 +57,12 @@ export function sheet({ title, body, onClose, actions, keepOpenOnAction = false 
 }
 export const closeTopSheet = () => sheetStack[sheetStack.length - 1]?.close();
 
+/* 强制重绘当前路由（location.hash = location.hash 不会触发 hashchange） */
+export const refresh = () => {
+  if (typeof window.__lcsRerender === 'function') window.__lcsRerender();
+  else location.reload();
+};
+
 export function confirmBox({ title, message, confirmLabel, danger }) {
   return new Promise(res => {
     const scrim = el('div', { class: 'scrim', style: 'z-index:89' });
