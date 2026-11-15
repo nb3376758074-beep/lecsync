@@ -71,7 +71,7 @@
   })();
 </script>
 <script type="module">
-  import { boot } from './assets/js/app.js?v=1.6.1';
+  import { boot } from './assets/js/app.js?v=1.6.2';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
@@ -85,9 +85,24 @@
   if (document.readyState === 'complete') go();
   else window.addEventListener('load', go, { once: true });
 
+  // 不再注册 Service Worker：宁可没有离线缓存，也不要旧缓存把新版本挡住。
+  // 同时把已经装过的 SW 卸掉、缓存清掉（一次性）。
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=1.6.1').catch(() => {});
+    window.addEventListener('load', async () => {
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        if (regs.length) {
+          await Promise.all(regs.map(r => r.unregister()));
+          if (window.caches) {
+            const ks = await caches.keys();
+            await Promise.all(ks.map(k => caches.delete(k)));
+          }
+          if (!sessionStorage.getItem('lcs.unregistered')) {
+            sessionStorage.setItem('lcs.unregistered', '1');
+            location.replace(location.pathname + '?v=' + Date.now());
+          }
+        }
+      } catch {}
     });
   }
 </script>
