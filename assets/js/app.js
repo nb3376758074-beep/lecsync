@@ -91,6 +91,7 @@ export function boot() {
   app.innerHTML = '';
   app.append(el('main', { class: 'view', id: 'view' }), tabbar());
   window.addEventListener('hashchange', route);
+  window.__lcsRerender = () => route();
   if (!location.hash) history.replaceState(null, '', '#/');
   route();
 
