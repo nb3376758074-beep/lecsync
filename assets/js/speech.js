@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=2.1.0';
+import { store, audioStore, uid, toast } from './core.js?v=2.2.0';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -219,12 +219,16 @@ const LANG_ZH = { zh: '简体中文', en: '英文', ru: '俄语', ja: '日语', 
 
 async function llmTranslate(text, to) {
   const s = store.settings;
-  if (!s.asrEndpoint || !s.asrKey) return '';
-  const base = s.asrEndpoint.replace(/\/+$/, '');
+  // 优先用「AI 模型」那套配置（可单独接 DeepSeek / 豆包 / 百炼），没有再退回转写接口的 key
+  const useAi = !!(s.aiEndpoint && s.aiKey);
+  const base = (useAi ? s.aiEndpoint : s.asrEndpoint || '').replace(/\/+$/, '');
+  const key = useAi ? s.aiKey : s.asrKey;
+  const model = useAi ? (s.aiModel || 'deepseek-chat') : (s.translateModel || 'deepseek-ai/DeepSeek-V4-Flash');
+  if (!base || !key) return '';
   const url = /\/chat\/completions$/.test(base) ? base : base + '/chat/completions';
   const targetName = LANG_ZH[(to || 'zh').split('-')[0]] || to;
   const body = {
-    model: s.translateModel || 'deepseek-ai/DeepSeek-V4-Flash',
+    model,
     messages: [
       { role: 'system', content: `You are a translator. Translate the user's text into ${targetName}. Output ONLY the translation, no explanations, no quotes.` },
       { role: 'user', content: text },
@@ -238,7 +242,7 @@ async function llmTranslate(text, to) {
   try {
     const r = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.asrKey },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
       body: JSON.stringify(body),
       signal: ctl.signal,
     });
