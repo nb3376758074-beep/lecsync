@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=2.2.1';
+import { store, audioStore, uid, toast } from './core.js?v=2.3.0';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -146,6 +146,9 @@ export function splitSentences(text) {
 const trCache = new Map();
 /* ---------- 本地 Whisper（transformers.js，纯浏览器推理，不花钱、不用 key） ---------- */
 const CDN = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+/* 自托管权重（速度/可达性都受控）：Repo lcs-models，Pages 直出，支持 Range */
+const MODEL_HOST = 'https://nb3376758074-beep.github.io/lcs-models';
+const DEFAULT_LOCAL_MODEL = 'whisper-base';
 let tf = null, asrPipe = null, asrModel = null;
 
 async function loadTransformers(onProgress) {
@@ -160,26 +163,40 @@ async function loadTransformers(onProgress) {
   return tf;
 }
 
-async function getAsr(model = 'Xenova/whisper-tiny', onProgress) {
+async function getAsr(model = DEFAULT_LOCAL_MODEL, onProgress) {
   const t = await loadTransformers(onProgress);
   if (asrPipe && asrModel === model) return asrPipe;
-  const build = async () => t.pipeline('automatic-speech-recognition', model, {
-    quantized: true,
-    progress_callback: p => {
-      if (p && p.status === 'progress' && p.total) {
-        onProgress && onProgress(`下载模型 ${Math.round((p.loaded / p.total) * 100)}%`);
-      }
-    },
-  });
-  onProgress && onProgress('首次使用要下载模型（约 40MB），之后会缓存…');
+
+  const build = async (host, modelId) => {
+    if (host) t.env.remoteHost = host;
+    return t.pipeline('automatic-speech-recognition', modelId, {
+      quantized: true,
+      progress_callback: p => {
+        if (p && p.status === 'progress' && p.total) {
+          onProgress && onProgress(`下载模型 ${Math.round((p.loaded / p.total) * 100)}%`);
+        }
+      },
+    });
+  };
+
+  onProgress && onProgress('首次使用要下载模型（base 约 76MB），之后会缓存…');
+  const plain = String(model).replace(/^Xenova\//, '');
+  // 1) 我们自己的 Pages（最快、国内/俄区都能下）
   try {
-    asrPipe = await build();
-  } catch (e) {
-    // 直连 huggingface 失败时换镜像再试一次
-    onProgress && onProgress('直连失败，改用镜像下载…');
-    t.env.remoteHost = 'https://hf-mirror.com';
-    asrPipe = await build();
+    asrPipe = await build(MODEL_HOST, plain);
+  } catch (e1) {
+    console.warn('self-hosted model failed', e1);
+    onProgress && onProgress('自托管权重不可用，改用 HuggingFace…');
+    // 2) HuggingFace 官方
+    try {
+      asrPipe = await build('https://huggingface.co', 'Xenova/' + plain);
+    } catch (e2) {
+      // 3) 镜像
+      onProgress && onProgress('直连失败，改用镜像下载…');
+      asrPipe = await build('https://hf-mirror.com', 'Xenova/' + plain);
+    }
   }
+  if (!asrPipe) throw new Error('模型加载失败');
   asrModel = model;
   return asrPipe;
 }
@@ -203,7 +220,7 @@ async function blobTo16k(blob) {
 }
 
 /** 本地转写：返回识别文本。onProgress(阶段文字) */
-export async function transcribeLocal(blob, { model = 'Xenova/whisper-tiny', language = null, onProgress } = {}) {
+export async function transcribeLocal(blob, { model = DEFAULT_LOCAL_MODEL, language = null, onProgress } = {}) {
   const pipe = await getAsr(model, onProgress);
   onProgress && onProgress('解码音频…');
   const audio = await blobTo16k(blob);
