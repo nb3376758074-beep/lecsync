@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=2.1.0';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=2.1.0';
-import { llmReady } from './ai.js?v=2.1.0';
-import { translateText } from './speech.js?v=2.1.0';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=2.2.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=2.2.0';
+import { llmReady } from './ai.js?v=2.2.0';
+import { translateText } from './speech.js?v=2.2.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -229,10 +229,11 @@ export async function settingsSub({ sub }) {
 
   if (sub === 'ai') {
     body.append(el('div', { class: 'card flat', style: 'margin-top:12px' },
-      el('div', { class: 'small', text: '填任意 OpenAI 兼容接口即可（OpenAI / DeepSeek / Moonshot / 本地 Ollama 都行）。留空则用本地规则纪要。' })));
-    body.append(field('Base URL', 'aiEndpoint', 'https://api.openai.com/v1'));
+      el('div', { class: 'small', text: '填任意 OpenAI 兼容接口即可（DeepSeek / 豆包方舟 / 阿里百炼 / OpenAI / Ollama 都行）。留空则用本地规则纪要。' })));
+    body.append(providerPresets());
+    body.append(field('Base URL', 'aiEndpoint', 'https://api.deepseek.com'));
     body.append(field('API Key', 'aiKey', 'sk-…', 'password'));
-    body.append(field('模型', 'aiModel', 'gpt-4o-mini'));
+    body.append(field('模型', 'aiModel', 'deepseek-chat'));
     body.append(testButton('ai'));
   } else if (sub === 'asr') {
     body.append(el('div', { class: 'card flat', style: 'margin-top:12px' },
@@ -247,6 +248,32 @@ export async function settingsSub({ sub }) {
     body.append(el('div', { class: 'small muted', style: 'margin-top:12px', text: '未知设置项' }));
   }
   return { node: root, title: L.t('settings') };
+}
+
+function providerPresets() {
+  const s = store.settings;
+  const P = [
+    { name: '硅基流动', base: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen3.5-9B', tip: '注册送额度，国内直连' },
+    { name: 'DeepSeek', base: 'https://api.deepseek.com', model: 'deepseek-chat', tip: '便宜，¥1/百万字' },
+    { name: '豆包·方舟', base: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-seed-1-6-250615', tip: '有免费额度，需实名' },
+    { name: '阿里百炼', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus', tip: '有免费额度' },
+  ];
+  const row = el('div', { class: 'row', style: 'gap:8px;flex-wrap:wrap;margin-top:10px' });
+  P.forEach(p => {
+    row.append(el('button', {
+      class: 'chip ghost', text: p.name, title: p.tip,
+      onClick: () => {
+        s.aiEndpoint = p.base; s.aiModel = p.model; store.save();
+        toast(p.name + ' 已填入：' + p.model + '，再粘贴 Key 即可');
+        rerender();
+      },
+    }));
+  });
+  return el('div', { class: 'card', style: 'margin-top:12px' },
+    el('div', { class: 'small', style: 'font-weight:640', text: '一键选服务商（自动填地址和模型）' }),
+    row,
+    el('div', { class: 'tiny dim', style: 'margin-top:8px;line-height:1.6' },
+      '浏览器直连已实测可用：DeepSeek、豆包方舟、阿里百炼、硅基流动 都返回 CORS 放行头。模型名以各家控制台为准（方舟要填「接入点 ID」，形如 ep-xxxx）。'));
 }
 
 function localCard() {
@@ -268,7 +295,7 @@ function localCard() {
     onClick: async () => {
       out.textContent = '准备中…';
       try {
-        const { transcribeLocal } = await import('./speech.js?v=2.1.0');
+        const { transcribeLocal } = await import('./speech.js?v=2.2.0');
         const blob = makeTone();
         const t0 = Date.now();
         const txt = await transcribeLocal(blob, {
@@ -384,7 +411,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=2.1.0');
+          const { llmChat } = await import('./ai.js?v=2.2.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
