@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=2.2.0';
+import { store, audioStore, uid, toast } from './core.js?v=2.2.1';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -308,14 +308,17 @@ export async function translateText(text, to, from = 'auto') {
     } catch { googleDead = 2; }
   }
 
-  // 2) MyMemory（国内可用；Google 挂了或超时都走这里）
+  // 2) 自己配的大模型（质量最好，且国内/俄区都能连）
   if (!out) {
-    try { out = await myMemoryTranslate(text, from, to); } catch {}
+    const s = store.settings;
+    if ((s.aiEndpoint && s.aiKey) || (s.asrEndpoint && s.asrKey)) {
+      try { out = await llmTranslate(text, to); } catch {}
+    }
   }
 
-  // 3) LLM 兜底（和转写同一个 key，国内/俄区都能连）
+  // 3) MyMemory（免 key，国内可直连，但质量一般、有每日额度）
   if (!out) {
-    try { out = await llmTranslate(text, to); } catch {}
+    try { out = await myMemoryTranslate(text, from, to); } catch {}
   }
 
   if (out) { trCache.set(key, out); writeCache(key, out); }
