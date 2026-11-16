@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=2.3.0';
+import { store, audioStore, uid, toast } from './core.js?v=2.4.0';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -271,13 +271,25 @@ async function llmTranslate(text, to) {
 }
 
 /* 按字符集猜源语言（MyMemory 这类接口不支持 auto 检测） */
-function guessLang(text) {
+export function detectLang(text) {
   if (/[\u0400-\u04FF]/.test(text)) return 'ru';
   if (/[\u3040-\u30FF]/.test(text)) return 'ja';
   if (/[\uAC00-\uD7AF]/.test(text)) return 'ko';
   if (/[\u4E00-\u9FFF]/.test(text)) return 'zh';
   if (/[\u0600-\u06FF]/.test(text)) return 'ar';
+  if (/[\u0E00-\u0E7F]/.test(text)) return 'th';
   return 'en';
+}
+const guessLang = detectLang;
+
+/** 互翻：A→B 或 B→A，自动判断原句属于哪一边 */
+export async function translateBoth(text, langA, langB) {
+  const a = (langA || 'zh-CN').split('-')[0];
+  const b = (langB || 'en-US').split('-')[0];
+  const det = detectLang(text);
+  const to = det === a ? (langB || 'en-US') : (langA || 'zh-CN');
+  const out = await translateText(text, to, 'auto');
+  return { text: out, to, from: det };
 }
 
 /* MyMemory：国内可直连、带 ACAO:* ，但有每日免费额度 */
