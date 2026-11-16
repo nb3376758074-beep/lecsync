@@ -1,6 +1,6 @@
 /* demo seed: ?demo=1 —— 载入一段真实的课堂录音数据，便于看效果 / 截图 / 验收 */
-import { store } from './core.js?v=2.2.0';
-import { localDigest } from './ai.js?v=2.2.0';
+import { store } from './core.js?v=2.2.1';
+import { localDigest } from './ai.js?v=2.2.1';
 
 const SCRIPT = [
   ['好，我们开始上课。今天讲第三章，主题是线性变换和特征值。', 'Alright, let\'s start. Today is chapter three — linear transformations and eigenvalues.'],
