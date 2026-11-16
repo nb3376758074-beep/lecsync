@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.4.0';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.4.0';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=2.4.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.4.0';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.5.0';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.5.0';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, translateBoth, transcribeLocal } from './speech.js?v=2.5.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.5.0';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
@@ -32,7 +32,7 @@ export async function render() {
   body.append(heroTitle());
   body.append(timerBlock());
   if (st.on) body.append(controls(), liveCard(), quotaCard());
-  else body.append(controls(), startHint(), asrHint(), quickActions(), recentBlock());
+  else body.append(controls(), startHint(), modeChips(), asrHint(), quickActions(), recentBlock());
   root.append(body);
   setTabState('record', { recording: st.on });
   return { node: root, title: st.on ? L.t('recording') : L.t('record') };
@@ -105,6 +105,23 @@ function controls() {
 }
 
 const startHint = () => el('div', { class: 'center tiny dim', style: 'padding:6px 0 2px', text: L.t('tapToStart') });
+
+/* 录音页的语言方向开关：单向 / 互翻 */
+function modeChips() {
+  const s = store.settings;
+  const row = el('div', { class: 'row', style: 'gap:8px;margin-top:12px' },
+    el('button', {
+      class: 'chip ' + (s.twoWay ? 'ghost' : 'primary'), style: 'justify-content:center;flex:1',
+      text: '单向 → ' + langName(s.targetLang, L.lang),
+      onClick: () => { s.twoWay = false; store.save(); reRender(); },
+    }),
+    el('button', {
+      class: 'chip ' + (s.twoWay ? 'primary' : 'ghost'), style: 'justify-content:center;flex:1',
+      text: '互翻 ' + langName(s.langA || 'zh-CN', L.lang) + ' ⇄ ' + langName(s.langB || 'ru-RU', L.lang),
+      onClick: () => { s.twoWay = true; store.save(); toast('已切换互翻：说哪边就翻成另一边'); reRender(); },
+    }));
+  return row;
+}
 
 function asrHint() {
   const s = store.settings;
@@ -309,8 +326,16 @@ function pushLine(text) {
     box.scrollTop = box.scrollHeight;
   }
   const s = store.settings;
-  // 只要设了目标语言就翻（源语言交给引擎自动检测；不再拿“识别语言”去比，否则俄→中会被误判成同语言而跳过）
-  if (s.autoTranslate && s.targetLang) {
+  // 互翻优先：说 A 翻成 B、说 B 翻成 A；否则按单向目标语言翻
+  if (s.twoWay) {
+    translateBoth(ln.text, s.langA, s.langB).then(r => {
+      if (!r || !r.text) return;
+      if (r.text.trim() === ln.text.trim()) return;
+      ln.tr = r.text; ln.trTo = r.to;
+      const tx = st.refs.lines?.querySelector(`.line[data-i="${idx}"] .tx`);
+      if (tx && !$('.tr', tx)) tx.append(el('span', { class: 'tr', text: r.text }));
+    }).catch(e => console.warn('two-way translate failed', e));
+  } else if (s.autoTranslate && s.targetLang) {
     translateText(ln.text, s.targetLang, 'auto').then(tr => {
       if (!tr) return;
       if (tr.trim() === ln.text.trim()) return; // 本来就是目标语言，不重复显示
