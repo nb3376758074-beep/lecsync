@@ -1,5 +1,5 @@
 /* ============ speech: live recognition, recorder, chunked ASR, level meter ============ */
-import { store, audioStore, uid, toast } from './core.js?v=2.0.0';
+import { store, audioStore, uid, toast } from './core.js?v=2.1.0';
 
 export const hasLiveSpeech = () => !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -249,6 +249,37 @@ async function llmTranslate(text, to) {
   finally { clearTimeout(timer); }
 }
 
+/* 按字符集猜源语言（MyMemory 这类接口不支持 auto 检测） */
+function guessLang(text) {
+  if (/[\u0400-\u04FF]/.test(text)) return 'ru';
+  if (/[\u3040-\u30FF]/.test(text)) return 'ja';
+  if (/[\uAC00-\uD7AF]/.test(text)) return 'ko';
+  if (/[\u4E00-\u9FFF]/.test(text)) return 'zh';
+  if (/[\u0600-\u06FF]/.test(text)) return 'ar';
+  return 'en';
+}
+
+/* MyMemory：国内可直连、带 ACAO:* ，但有每日免费额度 */
+async function myMemoryTranslate(text, from, to) {
+  const src = from && from !== 'auto' ? from.split('-')[0] : guessLang(text);
+  const q = encodeURIComponent(text.slice(0, 480));
+  const deadline = 6000;
+  const attempt = async (s, t) => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), deadline);
+    try {
+      const r = await fetch(`https://api.mymemory.translated.net/get?q=${q}&langpair=${s}|${t}`, { signal: ctl.signal });
+      if (!r.ok) return '';
+      const j = await r.json();
+      const v = (j?.responseData?.translatedText || '').trim();
+      if (!v || /MYMEMORY WARNING|QUOTA|INVALID/i.test(v)) return '';
+      return v;
+    } catch { return ''; }
+    finally { clearTimeout(timer); }
+  };
+  return (await attempt(src, to)) || (await attempt('en', to));
+}
+
 export async function translateText(text, to, from = 'auto') {
   const key = from + '|' + to + '|' + text;
   if (trCache.has(key)) return trCache.get(key);
@@ -256,11 +287,12 @@ export async function translateText(text, to, from = 'auto') {
   const sl = (from || 'auto').split('-')[0], tl = (to || 'en').split('-')[0];
   let out = '';
 
-  // 1) Google（快，但在俄区不稳）
+  // 1) Google（快，但中国大陆不可用、俄区不稳）
   if (googleDead !== 2) {
     try {
       const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 6000);
+      // 首次探测给 2.5s（国内 Google 直接不通，别让每句都卡 5 秒）
+      const t = setTimeout(() => ctl.abort(), googleDead === 0 ? 2500 : 5000);
       const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
       const r = await fetch(url, { mode: 'cors', signal: ctl.signal });
       clearTimeout(t);
@@ -272,18 +304,12 @@ export async function translateText(text, to, from = 'auto') {
     } catch { googleDead = 2; }
   }
 
-  // 2) MyMemory（5 秒超时，别把后面的兜底堵死）
-  if (!out && googleDead === 2) {
-    try {
-      const ctl = new AbortController();
-      const t = setTimeout(() => ctl.abort(), 5000);
-      const r2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 480))}&langpair=${sl === 'auto' ? 'zh' : sl}|${tl}`, { signal: ctl.signal });
-      clearTimeout(t);
-      if (r2.ok) { const j2 = await r2.json(); out = j2?.responseData?.translatedText || ''; }
-    } catch {}
+  // 2) MyMemory（国内可用；Google 挂了或超时都走这里）
+  if (!out) {
+    try { out = await myMemoryTranslate(text, from, to); } catch {}
   }
 
-  // 3) LLM 兜底（和转写同一个 key）
+  // 3) LLM 兜底（和转写同一个 key，国内/俄区都能连）
   if (!out) {
     try { out = await llmTranslate(text, to); } catch {}
   }
