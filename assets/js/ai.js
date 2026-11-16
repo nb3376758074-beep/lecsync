@@ -1,5 +1,5 @@
 /* ============ ai: local digest extraction + LLM chat (own key) ============ */
-import { store, fmtTs } from './core.js?v=2.2.0';
+import { store, fmtTs } from './core.js?v=2.2.1';
 
 const STOP_ZH = new Set(('的 了 是 在 和 与 就 也 都 而 及 或 一个 这个 那个 我们 你们 他们 它 我 你 他 她 这 那 有 没有 不是 因为 所以 但是 如果 然后 可以 需要 进行 通过 对于 关于 已经 还是 以及 什么 怎么 这样 那样 一下 一些 现在 时候 问题 东西 大家 感觉 比较 非常 特别 可能 应该 知道 觉得 就是 还有 其实 这种 那种 方面 内容 部分 情况'.split(/\s+/)));
 const STOP_EN = new Set(('the a an and or but if then that this these those i you he she it we they is are was were be been being to of in on at for with from by as not no yes so very just really about into over under than too also can could would should will shall may might must do does did done have has had having me my our your their its them us our i\'m it\'s don\'t doesn\'t'.split(/\s+/)));
