@@ -355,7 +355,7 @@ const DEFAULTS = {
   settings: {
     uiLang: 'zh', theme: 'auto', subtitleSize: 20, recognitionLang: 'zh-CN', targetLang: 'en-US',
     autoTranslate: true, bilingual: true, autoDigest: true,
-    engine: 'auto', asrEndpoint: 'https://api.siliconflow.cn/v1', asrKey: '', asrModel: 'FunAudioLLM/SenseVoiceSmall', localModel: 'Xenova/whisper-tiny',
+    engine: 'auto', asrEndpoint: 'https://api.siliconflow.cn/v1', asrKey: '', asrModel: 'FunAudioLLM/SenseVoiceSmall', localModel: 'whisper-base',
     aiEndpoint: '', aiKey: '', aiModel: 'gpt-4o-mini',
     seenOnboarding: false, unmarkTips: {},
   },
