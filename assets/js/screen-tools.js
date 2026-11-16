@@ -1,8 +1,8 @@
 /* ============ screens: Upload, Translate, Dictation ============ */
-import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.2.0';
-import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.2.0';
-import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.2.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.2.0';
+import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.2.1';
+import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.2.1';
+import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.2.1';
+import { localDigest, suggestTitle } from './ai.js?v=2.2.1';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rerender = () => refresh();
