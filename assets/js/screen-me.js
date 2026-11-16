@@ -1,8 +1,8 @@
 /* ============ screens: Profile / Settings / Pro / Team / Voice / Models / About ============ */
-import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS } from './core.js?v=2.4.0';
-import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=2.4.0';
-import { llmReady } from './ai.js?v=2.4.0';
-import { translateText } from './speech.js?v=2.4.0';
+import { el, I, L, store, toast, fmtDate, fmtDur, bytes, audioStore, langName, uid, LANGS, APP_VER } from './core.js?v=2.5.0';
+import { header, nav, sheet, confirmBox, promptBox, pickLanguage, copyText, shareText, refresh } from './ui.js?v=2.5.0';
+import { llmReady } from './ai.js?v=2.5.0';
+import { translateText } from './speech.js?v=2.5.0';
 
 function rerender() { refresh(); }
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -295,7 +295,7 @@ function localCard() {
     onClick: async () => {
       out.textContent = '准备中…';
       try {
-        const { transcribeLocal } = await import('./speech.js?v=2.4.0');
+        const { transcribeLocal } = await import('./speech.js?v=2.5.0');
         const blob = makeTone();
         const t0 = Date.now();
         const txt = await transcribeLocal(blob, {
@@ -411,7 +411,7 @@ function testButton(kind) {  const out = el('div', { class: 'tiny dim', style: '
       try {
         if (kind === 'ai') {
           if (!s.aiEndpoint || !s.aiKey) throw new Error('未填地址或 Key');
-          const { llmChat } = await import('./ai.js?v=2.4.0');
+          const { llmChat } = await import('./ai.js?v=2.5.0');
           const r = await llmChat([{ role: 'user', content: 'ping' }], s);
           out.textContent = '✓ ' + r.slice(0, 60);
         } else {
@@ -645,7 +645,7 @@ export async function about() {
   body.append(el('div', { class: 'center', style: 'padding:22px 0' },
     el('img', { src: 'logo.png', width: 72, height: 72, alt: '皓月翻译', style: 'border-radius:18px' }),
     el('div', { style: 'font-size:20px;font-weight:720;margin-top:10px', text: '皓月翻译' }),
-    el('div', { class: 'tiny dim', text: 'v1.0 · 独立网页实现' })));
+    el('div', { class: 'tiny dim', text: 'v' + APP_VER + ' · 独立网页实现' })));
   body.append(el('div', { class: 'list', style: 'margin-top:10px' },
     item({ icon: I.crown, title: L.t('proTitle'), sub: '所有付费权益已解锁', onClick: () => nav('/pro') }),
     item({ icon: I.privacy, title: L.t('privacy'), onClick: () => nav('/privacy') }),
