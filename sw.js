@@ -1,5 +1,5 @@
 /* LecSync Web · service worker: app shell + offline */
-const V = 'lcs-2.7.0';
+const V = 'lcs-2.7.1';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './assets/css/app.css',
