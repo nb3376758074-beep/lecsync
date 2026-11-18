@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.6.0';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.6.0';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=2.6.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.6.0';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.7.0';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.7.0';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=2.7.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.7.0';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
@@ -31,7 +31,7 @@ export async function render() {
   const body = el('div', { class: 'rec-hero' });
   body.append(heroTitle());
   body.append(timerBlock());
-  if (st.on) body.append(controls(), liveCard(), quotaCard());
+  if (st.on) body.append(controls(), modeChips(), liveCard(), quotaCard());
   else body.append(controls(), startHint(), modeChips(), asrHint(), quickActions(), recentBlock());
   root.append(body);
   setTabState('record', { recording: st.on });
@@ -106,21 +106,27 @@ function controls() {
 
 const startHint = () => el('div', { class: 'center tiny dim', style: 'padding:6px 0 2px', text: L.t('tapToStart') });
 
-/* 录音页：显示当前翻译方向，点一下对调 */
+/* 录音页：显示当前翻译方向，点一下对调（录音中也能点，立即生效） */
 function modeChips() {
   const s = store.settings;
-  return el('button', {
+  const label = el('span', { text: dirText() });
+  const btn = el('button', {
     class: 'chip ghost', style: 'justify-content:center;margin-top:12px;width:100%;padding:10px 14px',
     onClick: () => {
       const a = s.recognitionLang, b = s.targetLang;
       s.recognitionLang = b; s.targetLang = a;
       store.save();
+      label.textContent = dirText();
       toast('已对调：' + langName(s.recognitionLang, L.lang) + ' → ' + langName(s.targetLang, L.lang));
-      reRender();
     },
   },
-    el('span', { text: langName(s.recognitionLang, L.lang) + '  →  ' + langName(s.targetLang, L.lang) }),
+    label,
     el('span', { style: 'margin-left:10px;font-size:16px;color:var(--text-3)', text: '⇄' }));
+  return btn;
+
+  function dirText() {
+    return langName(s.recognitionLang, L.lang) + '  →  ' + langName(s.targetLang, L.lang);
+  }
 }
 
 function asrHint() {
