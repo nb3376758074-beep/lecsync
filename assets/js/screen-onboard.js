@@ -1,5 +1,5 @@
 /* ============ onboarding overlay ============ */
-import { el, I, L, store, logoMark } from './core.js?v=2.6.0';
+import { el, I, L, store, logoMark } from './core.js?v=2.7.0';
 
 const ART = [
   `<svg viewBox="0 0 240 180" width="100%" style="max-width:300px">
