@@ -1,8 +1,8 @@
 /* ============ screen: Record (home) ============ */
-import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.5.0';
-import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.5.0';
-import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, translateBoth, transcribeLocal } from './speech.js?v=2.5.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.5.0';
+import { $, el, I, L, store, toast, fmtClock, fmtAgo, langName, uid, audioStore, sleep } from './core.js?v=2.6.0';
+import { header, nav, pickLanguage, setTabState, sheet, copyText } from './ui.js?v=2.6.0';
+import { makeRecorder, makeLive, hasLiveSpeech, transcribeBlob, splitSentences, translateText, transcribeLocal } from './speech.js?v=2.6.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.6.0';
 
 const BAR_COUNT = 34;
 const IDLE_BARS = Array.from({ length: BAR_COUNT }, (_, i) =>
@@ -106,21 +106,21 @@ function controls() {
 
 const startHint = () => el('div', { class: 'center tiny dim', style: 'padding:6px 0 2px', text: L.t('tapToStart') });
 
-/* 录音页的语言方向开关：单向 / 互翻 */
+/* 录音页：显示当前翻译方向，点一下对调 */
 function modeChips() {
   const s = store.settings;
-  const row = el('div', { class: 'row', style: 'gap:8px;margin-top:12px' },
-    el('button', {
-      class: 'chip ' + (s.twoWay ? 'ghost' : 'primary'), style: 'justify-content:center;flex:1',
-      text: '单向 → ' + langName(s.targetLang, L.lang),
-      onClick: () => { s.twoWay = false; store.save(); reRender(); },
-    }),
-    el('button', {
-      class: 'chip ' + (s.twoWay ? 'primary' : 'ghost'), style: 'justify-content:center;flex:1',
-      text: '互翻 ' + langName(s.langA || 'zh-CN', L.lang) + ' ⇄ ' + langName(s.langB || 'ru-RU', L.lang),
-      onClick: () => { s.twoWay = true; store.save(); toast('已切换互翻：说哪边就翻成另一边'); reRender(); },
-    }));
-  return row;
+  return el('button', {
+    class: 'chip ghost', style: 'justify-content:center;margin-top:12px;width:100%;padding:10px 14px',
+    onClick: () => {
+      const a = s.recognitionLang, b = s.targetLang;
+      s.recognitionLang = b; s.targetLang = a;
+      store.save();
+      toast('已对调：' + langName(s.recognitionLang, L.lang) + ' → ' + langName(s.targetLang, L.lang));
+      reRender();
+    },
+  },
+    el('span', { text: langName(s.recognitionLang, L.lang) + '  →  ' + langName(s.targetLang, L.lang) }),
+    el('span', { style: 'margin-left:10px;font-size:16px;color:var(--text-3)', text: '⇄' }));
 }
 
 function asrHint() {
@@ -326,19 +326,11 @@ function pushLine(text) {
     box.scrollTop = box.scrollHeight;
   }
   const s = store.settings;
-  // 互翻优先：说 A 翻成 B、说 B 翻成 A；否则按单向目标语言翻
-  if (s.twoWay) {
-    translateBoth(ln.text, s.langA, s.langB).then(r => {
-      if (!r || !r.text) return;
-      if (r.text.trim() === ln.text.trim()) return;
-      ln.tr = r.text; ln.trTo = r.to;
-      const tx = st.refs.lines?.querySelector(`.line[data-i="${idx}"] .tx`);
-      if (tx && !$('.tr', tx)) tx.append(el('span', { class: 'tr', text: r.text }));
-    }).catch(e => console.warn('two-way translate failed', e));
-  } else if (s.autoTranslate && s.targetLang) {
+  // 单向翻译：按「翻译目标」翻（方向可在录音页用 ⇄ 一键对调）
+  if (s.autoTranslate && s.targetLang) {
     translateText(ln.text, s.targetLang, 'auto').then(tr => {
       if (!tr) return;
-      if (tr.trim() === ln.text.trim()) return; // 本来就是目标语言，不重复显示
+      if (tr.trim() === ln.text.trim()) return;
       ln.tr = tr;
       const tx = st.refs.lines?.querySelector(`.line[data-i="${idx}"] .tx`);
       if (tx && !$('.tr', tx)) tx.append(el('span', { class: 'tr', text: tr }));
