@@ -1,8 +1,8 @@
 /* ============ screens: Upload, Translate, Dictation ============ */
-import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.5.0';
-import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.5.0';
-import { translateText, translateBoth, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.5.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.5.0';
+import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.6.0';
+import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.6.0';
+import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.6.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.6.0';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rerender = () => refresh();
@@ -116,47 +116,30 @@ export async function translate() {
   root.append(body);
 
   const S = store.settings;
-  if (!S.langA) S.langA = 'zh-CN';
-  if (!S.langB) S.langB = 'ru-RU';
   tr.to = S.targetLang || tr.to;
 
-  const modeRow = el('div', { class: 'row', style: 'gap:8px;margin-top:10px' },
+  // 语言行：源语言 · ⇄ 一键对调 · 目标语言
+  const pickRow = el('div', { class: 'row', style: 'gap:8px;margin-top:10px' },
     el('button', {
-      class: 'chip ' + (S.twoWay ? 'ghost' : 'primary'), style: 'justify-content:center;flex:1',
-      text: '单向翻译', onClick: () => { S.twoWay = false; store.save(); refresh(); },
+      class: 'chip ghost grow', style: 'justify-content:center',
+      text: tr.src === 'auto' ? L.t('detectAuto') : langName(tr.src, L.lang),
+      onClick: () => pickLanguage({ value: tr.src, onPick: c => { tr.src = c; refresh(); } }),
     }),
     el('button', {
-      class: 'chip ' + (S.twoWay ? 'primary' : 'ghost'), style: 'justify-content:center;flex:1',
-      text: '互翻 ⇄', onClick: () => { S.twoWay = true; store.save(); refresh(); },
+      class: 'chip ghost', style: 'justify-content:center;padding:0 10px', text: '⇄',
+      title: '对调语言',
+      onClick: () => {
+        const a = S.recognitionLang, b = tr.to;
+        S.recognitionLang = b; tr.to = a; S.targetLang = a; store.save();
+        toast('已对调：' + langName(S.recognitionLang, L.lang) + ' → ' + langName(a, L.lang));
+        refresh();
+      },
+    }),
+    el('button', {
+      class: 'chip ghost grow', style: 'justify-content:center', text: langName(tr.to, L.lang),
+      onClick: () => pickLanguage({ value: tr.to, onPick: c => { tr.to = c; store.settings.targetLang = c; store.save(); refresh(); } }),
     }));
-  body.append(modeRow);
-
-  const pickRow = S.twoWay
-    ? el('div', { class: 'row', style: 'gap:8px;margin-top:8px' },
-      el('button', {
-        class: 'chip ghost grow', style: 'justify-content:center', text: langName(S.langA, L.lang),
-        onClick: () => pickLanguage({ value: S.langA, onPick: c => { S.langA = c; store.save(); refresh(); } }),
-      }),
-      el('span', { html: I.translate, style: 'display:grid;color:var(--text-3)' }),
-      el('button', {
-        class: 'chip ghost grow', style: 'justify-content:center', text: langName(S.langB, L.lang),
-        onClick: () => pickLanguage({ value: S.langB, onPick: c => { S.langB = c; store.save(); refresh(); } }),
-      }))
-    : el('div', { class: 'row', style: 'gap:8px;margin-top:8px' },
-      el('button', {
-        class: 'chip ghost grow', style: 'justify-content:center',
-        text: tr.src === 'auto' ? L.t('detectAuto') : langName(tr.src, L.lang),
-        onClick: () => pickLanguage({ value: tr.src, onPick: c => { tr.src = c; refresh(); } }),
-      }),
-      el('span', { html: I.translate, style: 'display:grid;color:var(--text-3)' }),
-      el('button', {
-        class: 'chip ghost grow', style: 'justify-content:center', text: langName(tr.to, L.lang),
-        onClick: () => pickLanguage({ value: tr.to, onPick: c => { tr.to = c; store.settings.targetLang = c; store.save(); refresh(); } }),
-      }));
   body.append(pickRow);
-  if (S.twoWay) {
-    body.append(el('div', { class: 'tiny dim center', style: 'margin-top:6px', text: '说哪边就翻成另一边：' + langName(S.langA, L.lang) + ' ⇄ ' + langName(S.langB, L.lang) }));
-  }
 
   // live interpretation block
   const liveBox = el('div', { class: 'card', style: 'margin-top:14px' });
@@ -185,15 +168,10 @@ export async function translate() {
     tr.lines.forEach(ln => liveLines.append(trLine(ln)));
   }
   async function addSentence(txt) {
-    const ln = { t: tr.lines.length * 3, text: txt, tr: '', trTo: '' };
+    const ln = { t: tr.lines.length * 3, text: txt, tr: '' };
     tr.lines.push(ln); paint();
     try {
-      if (store.settings.twoWay) {
-        const r = await translateBoth(txt, store.settings.langA, store.settings.langB);
-        ln.tr = r.text; ln.trTo = r.to;
-      } else {
-        ln.tr = await translateText(txt, tr.to, 'auto');
-      }
+      ln.tr = await translateText(txt, tr.to, 'auto');
       paint();
     } catch {}
   }
@@ -258,15 +236,7 @@ export async function translate() {
       onClick: async () => {
         const v = ta.value.trim(); if (!v) return;
         out.style.display = 'block'; out.textContent = L.t('translating') + '…';
-        let r = '';
-        if (store.settings.twoWay) {
-          const res = await translateBoth(v, store.settings.langA, store.settings.langB);
-          r = res.text;
-          out.dataset.to = res.to || '';
-        } else {
-          r = await translateText(v, tr.to, tr.src);
-          out.dataset.to = tr.to;
-        }
+        const r = await translateText(v, tr.to, tr.src);
         out.innerHTML = esc(r || '翻译失败，检查网络') +
           `<div class="row" style="gap:8px;margin-top:10px"><button class="btn sm ghost" id="cp">${L.t('copyText')}</button><button class="btn sm ghost" id="save">存为会话</button></div>`;
         el('#cp', out).onclick = () => copyText(r);
