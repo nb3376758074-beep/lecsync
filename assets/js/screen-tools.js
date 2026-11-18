@@ -1,8 +1,8 @@
 /* ============ screens: Upload, Translate, Dictation ============ */
-import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.6.0';
-import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.6.0';
-import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.6.0';
-import { localDigest, suggestTitle } from './ai.js?v=2.6.0';
+import { el, I, L, store, toast, fmtClock, langName, uid, audioStore } from './core.js?v=2.7.0';
+import { header, nav, sheet, pickLanguage, copyText, emptyState, refresh } from './ui.js?v=2.7.0';
+import { translateText, splitSentences, transcribeBlob, makeLive, makeRecorder, hasLiveSpeech } from './speech.js?v=2.7.0';
+import { localDigest, suggestTitle } from './ai.js?v=2.7.0';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rerender = () => refresh();
@@ -118,27 +118,28 @@ export async function translate() {
   const S = store.settings;
   tr.to = S.targetLang || tr.to;
 
-  // 语言行：源语言 · ⇄ 一键对调 · 目标语言
-  const pickRow = el('div', { class: 'row', style: 'gap:8px;margin-top:10px' },
-    el('button', {
-      class: 'chip ghost grow', style: 'justify-content:center',
-      text: tr.src === 'auto' ? L.t('detectAuto') : langName(tr.src, L.lang),
-      onClick: () => pickLanguage({ value: tr.src, onPick: c => { tr.src = c; refresh(); } }),
-    }),
-    el('button', {
-      class: 'chip ghost', style: 'justify-content:center;padding:0 10px', text: '⇄',
-      title: '对调语言',
-      onClick: () => {
-        const a = S.recognitionLang, b = tr.to;
-        S.recognitionLang = b; tr.to = a; S.targetLang = a; store.save();
-        toast('已对调：' + langName(S.recognitionLang, L.lang) + ' → ' + langName(a, L.lang));
-        refresh();
-      },
-    }),
-    el('button', {
-      class: 'chip ghost grow', style: 'justify-content:center', text: langName(tr.to, L.lang),
-      onClick: () => pickLanguage({ value: tr.to, onPick: c => { tr.to = c; store.settings.targetLang = c; store.save(); refresh(); } }),
-    }));
+  // 语言行：源语言 · ⇄ 一键对调（同传进行中也能点） · 目标语言
+  const srcLabel = tr.src === 'auto' ? L.t('detectAuto') : langName(tr.src, L.lang);
+  const srcChip = el('button', {
+    class: 'chip ghost grow', style: 'justify-content:center', text: srcLabel,
+    onClick: () => pickLanguage({ value: tr.src, onPick: c => { tr.src = c; refresh(); } }),
+  });
+  const toChip = el('button', {
+    class: 'chip ghost grow', style: 'justify-content:center', text: langName(tr.to, L.lang),
+    onClick: () => pickLanguage({ value: tr.to, onPick: c => { tr.to = c; store.settings.targetLang = c; store.save(); refresh(); } }),
+  });
+  const swapChip = el('button', {
+    class: 'chip ghost', style: 'justify-content:center;padding:0 10px', text: '⇄', title: '对调语言',
+    onClick: () => {
+      const wasRec = S.recognitionLang, wasTo = tr.to;
+      S.recognitionLang = wasTo; tr.to = wasRec; S.targetLang = wasRec;
+      store.save();
+      srcChip.textContent = tr.src === 'auto' ? L.t('detectAuto') : langName(tr.src, L.lang);
+      toChip.textContent = langName(tr.to, L.lang);
+      toast('已对调：' + langName(S.recognitionLang, L.lang) + ' → ' + langName(wasRec, L.lang));
+    },
+  });
+  const pickRow = el('div', { class: 'row', style: 'gap:8px;margin-top:10px' }, srcChip, swapChip, toChip);
   body.append(pickRow);
 
   // live interpretation block
