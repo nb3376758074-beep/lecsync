@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="auto">
+<html lang="zh-CN" data-theme="auto" data-ver="2.7.2">
 <head>
 <meta charset="utf-8">
 <title>皓月翻译 · 录音 · 转录 · 纪要</title>
@@ -58,16 +58,32 @@
       return Promise.all(jobs);
     }
     clean().then(function () {}, function () {});
+    function showFallback() {
+      if (booted() || document.getElementById('lcs-err')) return;
+      var d = document.createElement('div');
+      d.id = 'lcs-err';
+      d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:#fff;color:#111;font:15px/1.6 system-ui,-apple-system,sans-serif;text-align:center';
+      d.innerHTML = '<div style="max-width:340px">'
+        + '<div style="font-size:17px;font-weight:700;margin-bottom:8px">页面没加载完</div>'
+        + '<div style="color:#666;font-size:13px;margin-bottom:16px">可能是网络中断或旧缓存。先点「重试」；还不行点「清理缓存并重试」。</div>'
+        + '<button id="lcs-retry" style="width:100%;padding:12px;border:0;border-radius:12px;background:#111;color:#fff;font-size:15px;font-weight:600;margin-bottom:10px">重试</button>'
+        + '<button id="lcs-clean" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;background:#fff;color:#111;font-size:15px">清理缓存并重试</button>'
+        + '<div style="color:#999;font-size:11px;margin-top:14px">皓月翻译 v' + (document.documentElement.dataset.ver || '') + '</div></div>';
+      document.body.appendChild(d);
+      document.getElementById('lcs-retry').onclick = function () { location.replace(location.pathname + '?v=' + Date.now()); };
+      document.getElementById('lcs-clean').onclick = function () { clean().then(reload, reload); };
+    }
     setTimeout(function () {
       if (booted()) return;
-      if (sessionStorage.getItem(FIX) === '1') return;
+      if (sessionStorage.getItem(FIX) === '1') { showFallback(); return; }
       sessionStorage.setItem(FIX, '1');
       clean().then(reload, reload);
     }, 3000);
+    setTimeout(function () { if (!booted()) showFallback(); }, 7000);
   })();
 </script>
 <script type="module">
-  import { boot } from './assets/js/app.js?v=2.7.1';
+  import { boot } from './assets/js/app.js?v=2.7.2';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
