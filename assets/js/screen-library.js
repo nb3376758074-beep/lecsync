@@ -1,8 +1,8 @@
 /* ============ screens: Folders, Chats, Trash, Search, Shared ============ */
-import { el, I, L, store, toast, fmtAgo, fmtDate, fmtClock, uid, langName } from './core.js?v=2.7.1';
-import { header, nav, sheet, confirmBox, promptBox, emptyState, shareText, refresh } from './ui.js?v=2.7.1';
-import { sessionItem } from './screen-record.js?v=2.7.1';
-import { askAI, llmReady, localAnswer } from './ai.js?v=2.7.1';
+import { el, I, L, store, toast, fmtAgo, fmtDate, fmtClock, uid, langName } from './core.js?v=2.7.2';
+import { header, nav, sheet, confirmBox, promptBox, emptyState, shareText, refresh } from './ui.js?v=2.7.2';
+import { sessionItem } from './screen-record.js?v=2.7.2';
+import { askAI, llmReady, localAnswer } from './ai.js?v=2.7.2';
 
 function rerender() {
   refresh();
@@ -316,7 +316,7 @@ export async function chat({ id }) {
     const v2 = document.querySelector('#view'); if (v2) v2.scrollTop = v2.scrollHeight;
   }
   async function askGeneral(q) {
-    const { llmChat } = await import('./ai.js?v=2.7.1');
+    const { llmChat } = await import('./ai.js?v=2.7.2');
     return llmChat([{ role: 'system', content: 'You are LecSync, a concise study assistant.' }, { role: 'user', content: q }]);
   }
   sendBtn.onclick = () => send();
