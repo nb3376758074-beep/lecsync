@@ -1,15 +1,15 @@
-<!doctype html>
-<html lang="zh-CN" data-theme="auto" data-ver="2.7.2">
+﻿<!doctype html>
+<html lang="zh-CN" data-theme="auto" data-ver="2.8.0">
 <head>
 <meta charset="utf-8">
-<title>皓月翻译 · 录音 · 转录 · 纪要</title>
+<title>鐨撴湀缈昏瘧 路 褰曢煶 路 杞綍 路 绾</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
-<meta name="description" content="皓月翻译 网页版：实时转录、双语字幕、AI 纪要，全部功能免费解锁。">
+<meta name="description" content="鐨撴湀缈昏瘧 缃戦〉鐗堬細瀹炴椂杞綍銆佸弻璇瓧骞曘€丄I 绾锛屽叏閮ㄥ姛鑳藉厤璐硅В閿併€?>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="皓月翻译">
+<meta name="apple-mobile-web-app-title" content="鐨撴湀缈昏瘧">
 <meta name="format-detection" content="telephone=no">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.webmanifest">
@@ -30,17 +30,17 @@
 <body>
 <div id="boot">
   <div class="m">
-    <img src="logo.png" width="96" height="96" alt="皓月翻译" style="border-radius:22px">
-    <div class="t">皓月翻译</div>
-    <div class="s">录音 · 转录 · 纪要</div>
+    <img src="logo.png" width="96" height="96" alt="鐨撴湀缈昏瘧" style="border-radius:22px">
+    <div class="t">鐨撴湀缈昏瘧</div>
+    <div class="s">褰曢煶 路 杞綍 路 绾</div>
   </div>
 </div>
 <div id="app"></div>
-<noscript style="padding:24px;display:block;font-family:system-ui">这个网页需要 JavaScript。</noscript>
+<noscript style="padding:24px;display:block;font-family:system-ui">杩欎釜缃戦〉闇€瑕?JavaScript銆?/noscript>
 <script>
-  // 自愈：每次打开都先卸掉旧 Service Worker + 清缓存；3 秒还没进应用就带新参数重载一次
+  // 鍙仛涓や欢浜嬶細鈶?娓呮帀鍘嗗彶閬楃暀鐨?Service Worker/缂撳瓨锛堝箓绛夛級
+  // 鈶?濡傛灉 15 绉掑悗妯″潡鑴氭湰杩?寮€濮嬫墽琛?閮芥病鍙戠敓锛屾墠鎻愮ず锛屽苟缁欐墜鍔ㄦ寜閽?  // 涓ョ鑷姩 reload 鈥斺€?鎱㈢綉涓嬪弽澶嶉噸杞戒細鎶婁笅杞芥案杩滄墦鏂紙杩欐槸涔嬪墠鐧藉睆鐨勭湡鍥狅級
   (function () {
-    var FIX = 'lcs.selfheal.v3';
     function booted() { return !!(document.querySelector('.tabbar') || document.querySelector('#view .rec-title')); }
     function reload() { location.replace(location.pathname + '?v=' + Date.now()); }
     function clean() {
@@ -55,35 +55,33 @@
           return Promise.all(ks.map(function (k) { return caches.delete(k); }));
         }));
       }
-      return Promise.all(jobs);
+      return Promise.all(jobs).catch(function () {});
     }
-    clean().then(function () {}, function () {});
+    clean();
+
     function showFallback() {
       if (booted() || document.getElementById('lcs-err')) return;
       var d = document.createElement('div');
       d.id = 'lcs-err';
       d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:grid;place-items:center;padding:24px;background:#fff;color:#111;font:15px/1.6 system-ui,-apple-system,sans-serif;text-align:center';
       d.innerHTML = '<div style="max-width:340px">'
-        + '<div style="font-size:17px;font-weight:700;margin-bottom:8px">页面没加载完</div>'
-        + '<div style="color:#666;font-size:13px;margin-bottom:16px">可能是网络中断或旧缓存。先点「重试」；还不行点「清理缓存并重试」。</div>'
-        + '<button id="lcs-retry" style="width:100%;padding:12px;border:0;border-radius:12px;background:#111;color:#fff;font-size:15px;font-weight:600;margin-bottom:10px">重试</button>'
-        + '<button id="lcs-clean" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;background:#fff;color:#111;font-size:15px">清理缓存并重试</button>'
-        + '<div style="color:#999;font-size:11px;margin-top:14px">皓月翻译 v' + (document.documentElement.dataset.ver || '') + '</div></div>';
+        + '<div style="font-size:17px;font-weight:700;margin-bottom:8px">鍔犺浇鏈夌偣鎱?/div>'
+        + '<div style="color:#666;font-size:13px;margin-bottom:16px">鑴氭湰杩樻病涓嬭浇瀹岋紝澶氬崐鏄綉缁滄參銆傚彲浠ュ厛绛変竴涓嬶紝鎴栫偣涓嬮潰鎸夐挳閲嶈瘯銆?/div>'
+        + '<button id="lcs-retry" style="width:100%;padding:12px;border:0;border-radius:12px;background:#111;color:#fff;font-size:15px;font-weight:600;margin-bottom:10px">閲嶈瘯</button>'
+        + '<button id="lcs-clean" style="width:100%;padding:12px;border:1px solid #ddd;border-radius:12px;background:#fff;color:#111;font-size:15px">娓呯悊缂撳瓨骞堕噸璇?/button>'
+        + '<div style="color:#999;font-size:11px;margin-top:14px">鐨撴湀缈昏瘧 v' + (document.documentElement.dataset.ver || '') + '</div></div>';
       document.body.appendChild(d);
       document.getElementById('lcs-retry').onclick = function () { location.replace(location.pathname + '?v=' + Date.now()); };
       document.getElementById('lcs-clean').onclick = function () { clean().then(reload, reload); };
     }
+
     setTimeout(function () {
-      if (booted()) return;
-      if (sessionStorage.getItem(FIX) === '1') { showFallback(); return; }
-      sessionStorage.setItem(FIX, '1');
-      clean().then(reload, reload);
-    }, 3000);
-    setTimeout(function () { if (!booted()) showFallback(); }, 7000);
+      if (booted() || window.__lcsStarted) return; // 妯″潡宸插紑濮嬫墽琛?鈫?缁х画绛夛紝鍒墦鎵?      showFallback();
+    }, 15000);
   })();
 </script>
 <script type="module">
-  import { boot } from './assets/js/app.js?v=2.7.2';
+  window.__lcsStarted = true; // 鍛婅瘔鍏滃簳鑴氭湰锛氭ā鍧楀凡缁忓紑濮嬫墽琛岋紝鍒啀寮规彁绀?  import { boot } from './assets/js/app.js?v=2.8.0';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
