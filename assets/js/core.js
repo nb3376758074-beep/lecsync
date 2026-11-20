@@ -313,7 +313,7 @@ const EN = {
   askPlaceholder: 'Ask about this recording, e.g. "What was the homework?"',
   cite: 'cite', page: 'p. {n}', at: 'at',
 };
-export const APP_VER = '2.8.0';
+export const APP_VER = '2.7.0';
 
 export const LANGS = [
   ['zh-CN', '中文（简体）', 'Chinese (Simplified)'], ['zh-TW', '中文（繁體）', 'Chinese (Traditional)'],
