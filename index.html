@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="auto" data-ver="2.8.0">
+<html lang="zh-CN" data-theme="auto" data-ver="2.7.0">
 <head>
 <meta charset="utf-8">
 <title>皓月翻译 · 录音 · 转录 · 纪要</title>
@@ -38,8 +38,9 @@
 <div id="app"></div>
 <noscript style="padding:24px;display:block;font-family:system-ui">这个网页需要 JavaScript。</noscript>
 <script>
-  // 只清一次历史 Service Worker / 缓存；严禁自动 reload（慢网下会自动重载导致永远进不去）
-  // 15 秒后若模块脚本连执行都没开始，才显示提示，且必须手动点按钮
+  // 只清一次历史 Service Worker / 缓存。
+  // 严禁自动 reload：慢网下模块还没下完就重载，会变成永远进不去的死循环（2.7.1 的事故）。
+  // 15 秒后若模块脚本连“开始执行”都没有，才显示提示，重载必须由用户手动点。
   (function () {
     function booted() { return !!(document.querySelector('.tabbar') || document.querySelector('#view .rec-title')); }
     function reload() { location.replace(location.pathname + '?v=' + Date.now()); }
@@ -83,7 +84,7 @@
 </script>
 <script type="module">
   window.__lcsStarted = true;
-  import { boot } from './assets/js/app.js?v=2.8.0';
+  import { boot } from './assets/js/app.js?v=2.7.0';
   if (new URLSearchParams(location.search).get('demo') === '1') {
     await import('./assets/js/demo.js');
   }
